@@ -12,7 +12,7 @@ import { Navbar } from "../components/ui-kit/navbar";
 import { Breadcrumb } from "../components/ui-kit/breadcrumb";
 
 function generateBreadcrumbs(
-  pathname: string
+  pathname: string,
 ): Array<{ name: string; href: string; current: boolean }> {
   const pages: Array<{ name: string; href: string; current: boolean }> = [];
 
@@ -25,18 +25,8 @@ function generateBreadcrumbs(
     const segment = segments[i];
     currentPath += `/${segment}`;
 
-    // Map segment to display name
-    let name = segment;
-    if (segment === "insta-accounts") {
-      name = "Insta Accounts";
-    } else if (/^\d+$/.test(segment)) {
-      // Show the account ID
-      name = segment;
-    } else {
-      // Capitalize first letter
-      name =
-        segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, " ");
-    }
+    // Map segment to display name: replace - with space, capitalize first letter
+    let name = segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, " ");
 
     pages.push({
       name,
@@ -60,9 +50,7 @@ export default function Layout() {
         <Sidebar>
           <SidebarHeader>
             <div className="px-2 py-1">
-              <h2 className="text-lg font-semibold text-zinc-950 dark:text-white">
-                Cool App Name
-              </h2>
+              <h2 className="text-lg font-semibold text-zinc-950 dark:text-white">Cool App Name</h2>
             </div>
           </SidebarHeader>
           <SidebarBody>
@@ -70,16 +58,10 @@ export default function Layout() {
               <SidebarItem href="/" current={pathname === "/"}>
                 <SidebarLabel>Dashboard</SidebarLabel>
               </SidebarItem>
-              <SidebarItem
-                href="/do-things"
-                current={pathname.startsWith("/do-things")}
-              >
+              <SidebarItem href="/do-things" current={pathname.startsWith("/do-things")}>
                 <SidebarLabel>Do things</SidebarLabel>
               </SidebarItem>
-              <SidebarItem
-                href="/manage-items"
-                current={pathname.startsWith("/manage-items")}
-              >
+              <SidebarItem href="/manage-items" current={pathname.startsWith("/manage-items")}>
                 <SidebarLabel>Manage Items</SidebarLabel>
               </SidebarItem>
             </SidebarSection>
