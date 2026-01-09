@@ -1,5 +1,7 @@
 import type { Route } from "./+types/index";
-import { listItems, createItem, softDeleteItem } from "~/db/repositories/items";
+import { listItemsByOrg, createItem, softDeleteItem } from "~/db/repositories/items";
+import { requireAuth } from "~/lib/session.server";
+import { getUserById } from "~/db/repositories/users";
 import { Heading } from "../../components/ui-kit/heading";
 import {
   Table,
@@ -33,12 +35,20 @@ export type ActionData =
   | { success: false; errors: Record<string, string[] | undefined> }
   | undefined;
 
-export async function loader({}: Route.LoaderArgs) {
-  const items = await listItems();
-  return { items };
+export async function loader({ request }: Route.LoaderArgs) {
+  const auth = await requireAuth(request);
+  const user = await getUserById(auth.userId);
+  if (!user) throw new Response("Unauthorized", { status: 401 });
+
+  const items = await listItemsByOrg(user.organizationId);
+  return { items, organizationId: user.organizationId };
 }
 
 export async function action({ request }: Route.ActionArgs) {
+  const auth = await requireAuth(request);
+  const user = await getUserById(auth.userId);
+  if (!user) throw new Response("Unauthorized", { status: 401 });
+
   const formData = await request.formData();
   const data = Object.fromEntries(formData);
 
@@ -48,7 +58,7 @@ export async function action({ request }: Route.ActionArgs) {
     if (!result.success) {
       return { success: false, errors: z.flattenError(result.error).fieldErrors };
     }
-    await softDeleteItem(result.data.id);
+    await softDeleteItem(result.data.id, user.organizationId);
     return redirect(".");
   }
 
@@ -58,9 +68,8 @@ export async function action({ request }: Route.ActionArgs) {
     return { success: false, errors: z.flattenError(result.error).fieldErrors };
   }
 
-  // TODO: Get organizationId from session/auth
   await createItem({
-    organizationId: 1,
+    organizationId: user.organizationId,
     title: result.data.title,
     description: result.data.description ?? null,
   });

@@ -27,15 +27,19 @@ export const users = pgTable("users", {
     }),
 });
 
-export const refreshTokens = pgTable("refresh_tokens", {
-  id: integer().primaryKey().generatedAlwaysAsIdentity(),
-  userId: integer("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  token: varchar({ length: 500 }).notNull().unique(),
-  expiresAt: timestamp("expires_at").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+export const refreshTokens = pgTable(
+  "refresh_tokens",
+  {
+    id: integer().primaryKey().generatedAlwaysAsIdentity(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    token: varchar({ length: 500 }).notNull().unique(),
+    expiresAt: timestamp("expires_at").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [index("refresh_tokens_user_id_idx").on(table.userId)],
+);
 
 export const organizations = pgTable("organizations", {
   id: integer().primaryKey().generatedAlwaysAsIdentity(),

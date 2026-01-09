@@ -60,18 +60,35 @@ export async function createTokens(userId: number, email: string) {
 }
 
 export async function refreshAccessToken(token: string) {
-  const [storedToken] = await db
-    .select()
-    .from(refreshTokens)
-    .where(and(eq(refreshTokens.token, token), gt(refreshTokens.expiresAt, new Date())))
-    .limit(1);
+  return await db.transaction(async (tx) => {
+    const [storedToken] = await tx
+      .select()
+      .from(refreshTokens)
+      .where(and(eq(refreshTokens.token, token), gt(refreshTokens.expiresAt, new Date())))
+      .limit(1);
 
-  if (!storedToken) return null;
+    if (!storedToken) return null;
 
-  const [user] = await db.select().from(users).where(eq(users.id, storedToken.userId)).limit(1);
-  if (!user) return null;
+    const [user] = await tx.select().from(users).where(eq(users.id, storedToken.userId)).limit(1);
+    if (!user) return null;
 
-  return { accessToken: generateAccessToken(user.id, user.email), user };
+    // Delete old refresh token
+    await tx.delete(refreshTokens).where(eq(refreshTokens.token, token));
+
+    // Create new refresh token (rotation)
+    const newRefreshToken = generateRefreshToken(user.id);
+    await tx.insert(refreshTokens).values({
+      userId: user.id,
+      token: newRefreshToken,
+      expiresAt: getRefreshTokenExpiry(),
+    });
+
+    return {
+      accessToken: generateAccessToken(user.id, user.email),
+      refreshToken: newRefreshToken,
+      user,
+    };
+  });
 }
 
 export async function deleteRefreshToken(token: string) {

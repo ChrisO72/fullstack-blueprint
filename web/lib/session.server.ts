@@ -30,6 +30,7 @@ export async function requireAuth(request: Request) {
         userId: payload.userId,
         email: payload.email,
         newAccessToken: null,
+        newRefreshToken: null,
       };
     }
   }
@@ -42,6 +43,7 @@ export async function requireAuth(request: Request) {
         userId: result.user.id,
         email: result.user.email,
         newAccessToken: result.accessToken,
+        newRefreshToken: result.refreshToken,
       };
     }
   }

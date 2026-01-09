@@ -36,6 +36,13 @@
       "when": 1768000479783,
       "tag": "0004_classy_patch",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1768002144883,
+      "tag": "0005_add_refresh_token_user_id_index",
+      "breakpoints": true
     }
   ]
 }

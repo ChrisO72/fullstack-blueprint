@@ -11,7 +11,7 @@ import {
 } from "../components/ui-kit/sidebar";
 import { Navbar } from "../components/ui-kit/navbar";
 import { Breadcrumb } from "../components/ui-kit/breadcrumb";
-import { requireAuth } from "../lib/session.server";
+import { requireAuth, setAuthCookies } from "../lib/session.server";
 import { getUserById } from "../../db/repositories/users";
 import type { Route } from "./+types/layout";
 
@@ -23,16 +23,12 @@ export async function loader({ request }: Route.LoaderArgs) {
     throw redirect("/login");
   }
 
-  // If we got a new access token from refresh, set it
-  if (auth.newAccessToken) {
-    return Response.json(
-      { user },
-      {
-        headers: {
-          "Set-Cookie": `accessToken=${auth.newAccessToken}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${15 * 60}`,
-        },
-      },
-    );
+  // If we got new tokens from refresh, set both cookies
+  if (auth.newAccessToken && auth.newRefreshToken) {
+    const cookies = setAuthCookies(auth.newAccessToken, auth.newRefreshToken);
+    const headers = new Headers();
+    cookies.forEach((cookie) => headers.append("Set-Cookie", cookie));
+    return Response.json({ user }, { headers });
   }
 
   return { user };
