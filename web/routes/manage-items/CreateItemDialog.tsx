@@ -11,10 +11,11 @@ import {
 import { Field, Label, ErrorMessage } from "../../components/ui-kit/fieldset";
 import { Input } from "../../components/ui-kit/input";
 import { PlusIcon } from "@heroicons/react/24/outline";
+import type { ActionData } from "./index";
 
 export function CreateItemDialog() {
   const [isOpen, setIsOpen] = useState(false);
-  const actionData = useActionData<{ error?: string }>();
+  const actionData = useActionData<ActionData>();
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";
 
@@ -30,9 +31,6 @@ export function CreateItemDialog() {
         <DialogDescription>Add a new item to your list.</DialogDescription>
         <Form method="post">
           <DialogBody>
-            {actionData?.error && (
-              <ErrorMessage>{actionData.error}</ErrorMessage>
-            )}
             <Field>
               <Label>Title</Label>
               <Input
@@ -41,7 +39,11 @@ export function CreateItemDialog() {
                 placeholder="Enter item title"
                 required
                 disabled={isSubmitting}
+                invalid={!!actionData?.errors?.title}
               />
+              {actionData?.errors?.title && (
+                <ErrorMessage>{actionData.errors.title[0]}</ErrorMessage>
+              )}
             </Field>
             <Field>
               <Label>Description</Label>
@@ -50,15 +52,15 @@ export function CreateItemDialog() {
                 name="description"
                 placeholder="Enter item description (optional)"
                 disabled={isSubmitting}
+                invalid={!!actionData?.errors?.description}
               />
+              {actionData?.errors?.description && (
+                <ErrorMessage>{actionData.errors.description[0]}</ErrorMessage>
+              )}
             </Field>
           </DialogBody>
           <DialogActions>
-            <Button
-              plain
-              onClick={() => setIsOpen(false)}
-              disabled={isSubmitting}
-            >
+            <Button plain onClick={() => setIsOpen(false)} disabled={isSubmitting}>
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>

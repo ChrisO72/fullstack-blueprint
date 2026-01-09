@@ -18,6 +18,20 @@ import {
   DropdownMenu,
 } from "../../components/ui-kit/dropdown";
 import { EllipsisHorizontalIcon } from "@heroicons/react/16/solid";
+import { z } from "zod";
+
+const createItemSchema = z.object({
+  title: z.string().min(1, "Title is required").max(255, "Title too long"),
+  description: z.string().max(1000, "Description too long").optional(),
+});
+
+const deleteItemSchema = z.object({
+  id: z.coerce.number({ message: "Invalid item ID" }).positive("Invalid item ID"),
+});
+
+export type ActionData =
+  | { success: false; errors: Record<string, string[] | undefined> }
+  | undefined;
 
 export async function loader({}: Route.LoaderArgs) {
   const items = await listItems();
@@ -26,38 +40,29 @@ export async function loader({}: Route.LoaderArgs) {
 
 export async function action({ request }: Route.ActionArgs) {
   const formData = await request.formData();
-  const method = request.method;
+  const data = Object.fromEntries(formData);
 
-  // Handle DELETE for soft delete
-  if (method === "DELETE") {
-    const id = formData.get("id");
-    if (!id) {
-      return { error: "Item ID is required" };
+  // Handle DELETE
+  if (request.method === "DELETE") {
+    const result = deleteItemSchema.safeParse(data);
+    if (!result.success) {
+      return { success: false, errors: z.flattenError(result.error).fieldErrors };
     }
-
-    const itemId = parseInt(id as string, 10);
-    if (isNaN(itemId)) {
-      return { error: "Invalid item ID" };
-    }
-
-    await softDeleteItem(itemId);
+    await softDeleteItem(result.data.id);
     return redirect(".");
   }
 
-  // Handle POST for create
-  const title = formData.get("title") as string;
-  const description = formData.get("description") as string | null;
-
-  if (!title) {
-    return { error: "Title is required" };
+  // Handle POST (create)
+  const result = createItemSchema.safeParse(data);
+  if (!result.success) {
+    return { success: false, errors: z.flattenError(result.error).fieldErrors };
   }
 
   // TODO: Get userId from session/auth
-  // For now, using default userId of 4
   await createItem({
     userId: 4,
-    title,
-    description: description || null,
+    title: result.data.title,
+    description: result.data.description ?? null,
   });
 
   return redirect(".");
@@ -79,12 +84,6 @@ export default function ManageItemsPage({ loaderData, actionData }: Route.Compon
         </Heading>
         <CreateItemDialog />
       </div>
-
-      {actionData?.error && (
-        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/20">
-          <p className="text-red-600 dark:text-red-400">{actionData.error}</p>
-        </div>
-      )}
 
       {items.length === 0 ? (
         <div className="rounded-lg bg-zinc-50 py-12 text-center dark:bg-zinc-900">

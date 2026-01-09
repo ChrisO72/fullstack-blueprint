@@ -22,15 +22,6 @@ HIKER_API_KEY=your-hiker-api-key
 GOOGLE_API_KEY=your-google-api-key
 ```
 
-### Development
-
-```bash
-npm install
-npm run dev          # web only
-npm run worker       # worker only
-npm run dev:all      # web + worker
-```
-
 ### Database
 
 ```bash
@@ -39,11 +30,13 @@ npx drizzle-kit migrate                          # apply migrations
 npx drizzle-kit studio                           # open database browser
 ```
 
-### Worker
+### Development
 
 ```bash
-npm run worker        # standalone
-npm run dev:all       # with web server
+npm install
+npm run dev          # web only
+npm run worker       # worker only
+npm run dev:all      # web + worker
 ```
 
 ### Production
