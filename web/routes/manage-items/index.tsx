@@ -1,9 +1,5 @@
 import type { Route } from "./+types/index";
-import {
-  listItems,
-  createItem,
-  softDeleteItem,
-} from "../../db/repositories/items";
+import { listItems, createItem, softDeleteItem } from "~/db/repositories/items";
 import { Heading } from "../../components/ui-kit/heading";
 import {
   Table,
@@ -67,19 +63,16 @@ export async function action({ request }: Route.ActionArgs) {
   return redirect(".");
 }
 
-export default function ManageItemsPage({
-  loaderData,
-  actionData,
-}: Route.ComponentProps) {
+export default function ManageItemsPage({ loaderData, actionData }: Route.ComponentProps) {
   const { items } = loaderData;
 
   return (
     <div>
-      <div className="flex justify-between items-start mb-6">
+      <div className="mb-6 flex items-start justify-between">
         <Heading>
           Manage Items
           {items.length > 0 && (
-            <span className="text-zinc-500 dark:text-zinc-400 font-normal ml-2">
+            <span className="ml-2 font-normal text-zinc-500 dark:text-zinc-400">
               ({items.length} total)
             </span>
           )}
@@ -88,13 +81,13 @@ export default function ManageItemsPage({
       </div>
 
       {actionData?.error && (
-        <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/20">
           <p className="text-red-600 dark:text-red-400">{actionData.error}</p>
         </div>
       )}
 
       {items.length === 0 ? (
-        <div className="text-center py-12 bg-zinc-50 dark:bg-zinc-900 rounded-lg">
+        <div className="rounded-lg bg-zinc-50 py-12 text-center dark:bg-zinc-900">
           <p className="text-zinc-500 dark:text-zinc-400">No items found.</p>
         </div>
       ) : (

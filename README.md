@@ -27,6 +27,7 @@ GOOGLE_API_KEY=your-google-api-key
 ```bash
 npm install
 npm run dev          # web only
+npm run worker       # worker only
 npm run dev:all      # web + worker
 ```
 
@@ -50,7 +51,21 @@ npm run dev:all       # with web server
 ```bash
 npm install
 npm run build
+npm run start         # web server
+npm run worker        # background worker (separate process)
 ```
+
+#### Render Deployment
+
+**Web Service:**
+
+- Build: `npm install && npm run build`
+- Start: `npm run start`
+
+**Background Worker** (separate service):
+
+- Build: `npm install`
+- Start: `npm run worker`
 
 ## Features
 
