@@ -15,25 +15,11 @@ export async function getItemById(id: number) {
 }
 
 export async function updateItem(id: number, data: Partial<InsertItem>) {
-  return await db
-    .update(items)
-    .set({
-      ...data,
-      updated_at: new Date(),
-    })
-    .where(eq(items.id, id))
-    .returning();
+  return await db.update(items).set(data).where(eq(items.id, id)).returning();
 }
 
 export async function softDeleteItem(id: number) {
-  return await db
-    .update(items)
-    .set({
-      deleted_at: new Date(),
-      updated_at: new Date(),
-    })
-    .where(eq(items.id, id))
-    .returning();
+  return await db.update(items).set({ deleted_at: new Date() }).where(eq(items.id, id)).returning();
 }
 
 export async function listItems() {
