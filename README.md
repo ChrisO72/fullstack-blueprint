@@ -2,14 +2,23 @@
 
 A template for building full-stack Node + React applications
 
+## Comes with:
+
+- React Router 7 SSR web app
+- Drizzle ORM + PostgreSQL
+- BullMQ job queues + scheduler (Redis)
+- JWT auth with refresh tokens
+- Multi-org user system
+- Catalyst UI Kit
+
 ## Setup
 
 ```bash
 # Environment variables
 
 # Auth
-AUTH_PASSWORD=your-password
 JWT_SECRET=your-secret-key
+REFRESH_SECRET=your-refresh-secret
 
 # Database
 DATABASE_URL=postgresql://user:password@host:port/database?sslmode=require
@@ -59,13 +68,3 @@ npm run worker        # background worker (separate process)
 
 - Build: `npm install`
 - Start: `npm run worker`
-
-## Features
-
-- Server-side rendering
-- Hot Module Replacement (HMR)
-- Data loading and mutations
-- Background jobs (BullMQ + node-cron)
-- TypeScript by default
-- TailwindCSS for styling
-- [React Router docs](https://reactrouter.com/)

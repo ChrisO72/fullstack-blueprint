@@ -7,11 +7,12 @@ export async function createUser(user: InsertUser) {
 }
 
 export async function getUserById(id: number) {
-  const result = await db
+  const [user] = await db
     .select()
     .from(users)
-    .where(and(eq(users.id, id), isNull(users.deleted_at)));
-  return result[0] || null;
+    .where(and(eq(users.id, id), isNull(users.deletedAt)))
+    .limit(1);
+  return user ?? null;
 }
 
 export async function updateUser(id: number, data: Partial<InsertUser>) {
@@ -19,7 +20,6 @@ export async function updateUser(id: number, data: Partial<InsertUser>) {
     .update(users)
     .set({
       ...data,
-      updated_at: new Date(),
     })
     .where(eq(users.id, id))
     .returning();
@@ -29,22 +29,19 @@ export async function softDeleteUser(id: number) {
   return await db
     .update(users)
     .set({
-      deleted_at: new Date(),
-      updated_at: new Date(),
+      deletedAt: new Date(),
     })
     .where(eq(users.id, id))
     .returning();
 }
 
 export async function listUsers() {
-  return await db.select().from(users).where(isNull(users.deleted_at));
+  return await db.select().from(users).where(isNull(users.deletedAt));
 }
 
 export async function getUsersByOrganizationId(organizationId: number) {
   return await db
     .select()
     .from(users)
-    .where(
-      and(eq(users.organizationId, organizationId), isNull(users.deleted_at))
-    );
+    .where(and(eq(users.organizationId, organizationId), isNull(users.deletedAt)));
 }

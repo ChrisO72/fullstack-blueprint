@@ -1,35 +1,40 @@
-import {
-  boolean,
-  decimal,
-  integer,
-  json,
-  pgTable,
-  text,
-  timestamp,
-  varchar,
-} from "drizzle-orm/pg-core";
+import { index, integer, pgTable, text, timestamp, varchar } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
 const timestamps = {
-  created_at: timestamp().defaultNow().notNull(),
-  updated_at: timestamp()
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")
     .defaultNow()
     .$onUpdate(() => new Date())
     .notNull(),
-  deleted_at: timestamp(),
+  deletedAt: timestamp("deleted_at"),
 };
 
 export const users = pgTable("users", {
   id: integer().primaryKey().generatedAlwaysAsIdentity(),
   ...timestamps,
   email: varchar({ length: 255 }).notNull().unique(),
-  firstName: varchar({ length: 100 }),
-  lastName: varchar({ length: 100 }),
+  passwordHash: varchar("password_hash", { length: 255 }),
+  firstName: varchar("first_name", { length: 100 }),
+  lastName: varchar("last_name", { length: 100 }),
   role: varchar({ enum: ["admin", "user", "viewer"] })
     .notNull()
     .default("user"),
-  organizationId: integer()
+  organizationId: integer("organization_id")
     .notNull()
-    .references(() => organizations.id),
+    .references(() => organizations.id, {
+      onDelete: "cascade",
+    }),
+});
+
+export const refreshTokens = pgTable("refresh_tokens", {
+  id: integer().primaryKey().generatedAlwaysAsIdentity(),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  token: varchar({ length: 500 }).notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export const organizations = pgTable("organizations", {
@@ -39,29 +44,53 @@ export const organizations = pgTable("organizations", {
   description: text(),
 });
 
-export const items = pgTable("items", {
-  id: integer().primaryKey().generatedAlwaysAsIdentity(),
-  ...timestamps,
-  userId: integer()
-    .notNull()
-    .references(() => users.id),
-  title: varchar({ length: 255 }).notNull(),
-  description: text(),
-  status: varchar({ enum: ["draft", "published", "archived"] })
-    .notNull()
-    .default("draft"),
-  priority: integer().default(0),
-});
+export const items = pgTable(
+  "items",
+  {
+    id: integer().primaryKey().generatedAlwaysAsIdentity(),
+    ...timestamps,
+    organizationId: integer("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    title: varchar({ length: 255 }).notNull(),
+    description: text(),
+    status: varchar({ enum: ["draft", "published", "archived"] })
+      .notNull()
+      .default("draft"),
+    priority: integer().default(0),
+  },
+  // Partial indexes: only index non-deleted rows to optimize soft-delete queries
+  (table) => [
+    index("items_active_idx")
+      .on(table.id)
+      .where(sql`deleted_at IS NULL`),
+    index("items_org_active_idx")
+      .on(table.organizationId)
+      .where(sql`deleted_at IS NULL`),
+  ],
+);
 
-export const subItems = pgTable("sub_items", {
-  id: integer().primaryKey().generatedAlwaysAsIdentity(),
-  ...timestamps,
-  itemId: integer()
-    .notNull()
-    .references(() => items.id),
-  title: varchar({ length: 255 }).notNull(),
-  description: text(),
-});
+export const subItems = pgTable(
+  "sub_items",
+  {
+    id: integer().primaryKey().generatedAlwaysAsIdentity(),
+    ...timestamps,
+    itemId: integer("item_id")
+      .notNull()
+      .references(() => items.id, { onDelete: "cascade" }),
+    title: varchar({ length: 255 }).notNull(),
+    description: text(),
+  },
+  // Partial indexes: only index non-deleted rows to optimize soft-delete queries
+  (table) => [
+    index("sub_items_active_idx")
+      .on(table.id)
+      .where(sql`deleted_at IS NULL`),
+    index("sub_items_item_active_idx")
+      .on(table.itemId)
+      .where(sql`deleted_at IS NULL`),
+  ],
+);
 
 export type SelectUser = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
@@ -74,3 +103,6 @@ export type InsertItem = typeof items.$inferInsert;
 
 export type SelectSubItem = typeof subItems.$inferSelect;
 export type InsertSubItem = typeof subItems.$inferInsert;
+
+export type SelectRefreshToken = typeof refreshTokens.$inferSelect;
+export type InsertRefreshToken = typeof refreshTokens.$inferInsert;

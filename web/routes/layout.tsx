@@ -1,4 +1,4 @@
-import { Outlet, useLocation } from "react-router";
+import { Outlet, redirect, useLocation, useLoaderData } from "react-router";
 import { SidebarLayout } from "../components/ui-kit/sidebar-layout";
 import {
   Sidebar,
@@ -7,9 +7,36 @@ import {
   SidebarItem,
   SidebarLabel,
   SidebarSection,
+  SidebarFooter,
 } from "../components/ui-kit/sidebar";
 import { Navbar } from "../components/ui-kit/navbar";
 import { Breadcrumb } from "../components/ui-kit/breadcrumb";
+import { requireAuth } from "../lib/session.server";
+import { getUserById } from "../../db/repositories/users";
+import type { Route } from "./+types/layout";
+
+export async function loader({ request }: Route.LoaderArgs) {
+  const auth = await requireAuth(request);
+
+  const user = await getUserById(auth.userId);
+  if (!user) {
+    throw redirect("/login");
+  }
+
+  // If we got a new access token from refresh, set it
+  if (auth.newAccessToken) {
+    return Response.json(
+      { user },
+      {
+        headers: {
+          "Set-Cookie": `accessToken=${auth.newAccessToken}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${15 * 60}`,
+        },
+      },
+    );
+  }
+
+  return { user };
+}
 
 function generateBreadcrumbs(
   pathname: string,
@@ -40,6 +67,7 @@ function generateBreadcrumbs(
 
 export default function Layout() {
   const location = useLocation();
+  const { user } = useLoaderData<typeof loader>();
   const pathname = location.pathname || "/";
   const breadcrumbPages = pathname === "/" ? [] : generateBreadcrumbs(pathname);
 
@@ -66,6 +94,16 @@ export default function Layout() {
               </SidebarItem>
             </SidebarSection>
           </SidebarBody>
+          <SidebarFooter>
+            <div className="flex flex-col gap-2 px-2 py-2">
+              <span className="truncate text-xs text-zinc-500 dark:text-zinc-400">
+                {user.email}
+              </span>
+              <SidebarItem href="/logout">
+                <SidebarLabel>Sign out</SidebarLabel>
+              </SidebarItem>
+            </div>
+          </SidebarFooter>
         </Sidebar>
       }
     >

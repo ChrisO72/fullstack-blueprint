@@ -7,11 +7,12 @@ export async function createItem(item: InsertItem) {
 }
 
 export async function getItemById(id: number) {
-  const result = await db
+  const [item] = await db
     .select()
     .from(items)
-    .where(and(eq(items.id, id), isNull(items.deleted_at)));
-  return result[0] || null;
+    .where(and(eq(items.id, id), isNull(items.deletedAt)))
+    .limit(1);
+  return item ?? null;
 }
 
 export async function updateItem(id: number, data: Partial<InsertItem>) {
@@ -19,16 +20,16 @@ export async function updateItem(id: number, data: Partial<InsertItem>) {
 }
 
 export async function softDeleteItem(id: number) {
-  return await db.update(items).set({ deleted_at: new Date() }).where(eq(items.id, id)).returning();
+  return await db.update(items).set({ deletedAt: new Date() }).where(eq(items.id, id)).returning();
 }
 
 export async function listItems() {
-  return await db.select().from(items).where(isNull(items.deleted_at));
+  return await db.select().from(items).where(isNull(items.deletedAt));
 }
 
-export async function getItemsByUserId(userId: number) {
+export async function getItemsByOrganizationId(organizationId: number) {
   return await db
     .select()
     .from(items)
-    .where(and(eq(items.userId, userId), isNull(items.deleted_at)));
+    .where(and(eq(items.organizationId, organizationId), isNull(items.deletedAt)));
 }

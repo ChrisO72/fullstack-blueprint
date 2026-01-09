@@ -58,9 +58,9 @@ export async function action({ request }: Route.ActionArgs) {
     return { success: false, errors: z.flattenError(result.error).fieldErrors };
   }
 
-  // TODO: Get userId from session/auth
+  // TODO: Get organizationId from session/auth
   await createItem({
-    userId: 4,
+    organizationId: 1,
     title: result.data.title,
     description: result.data.description ?? null,
   });

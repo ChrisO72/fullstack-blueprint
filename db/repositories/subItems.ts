@@ -7,11 +7,12 @@ export async function createSubItem(subItem: InsertSubItem) {
 }
 
 export async function getSubItemById(id: number) {
-  const result = await db
+  const [subItem] = await db
     .select()
     .from(subItems)
-    .where(and(eq(subItems.id, id), isNull(subItems.deleted_at)));
-  return result[0] || null;
+    .where(and(eq(subItems.id, id), isNull(subItems.deletedAt)))
+    .limit(1);
+  return subItem ?? null;
 }
 
 export async function updateSubItem(id: number, data: Partial<InsertSubItem>) {
@@ -19,7 +20,6 @@ export async function updateSubItem(id: number, data: Partial<InsertSubItem>) {
     .update(subItems)
     .set({
       ...data,
-      updated_at: new Date(),
     })
     .where(eq(subItems.id, id))
     .returning();
@@ -29,20 +29,19 @@ export async function softDeleteSubItem(id: number) {
   return await db
     .update(subItems)
     .set({
-      deleted_at: new Date(),
-      updated_at: new Date(),
+      deletedAt: new Date(),
     })
     .where(eq(subItems.id, id))
     .returning();
 }
 
 export async function listSubItems() {
-  return await db.select().from(subItems).where(isNull(subItems.deleted_at));
+  return await db.select().from(subItems).where(isNull(subItems.deletedAt));
 }
 
 export async function getSubItemsByItemId(itemId: number) {
   return await db
     .select()
     .from(subItems)
-    .where(and(eq(subItems.itemId, itemId), isNull(subItems.deleted_at)));
+    .where(and(eq(subItems.itemId, itemId), isNull(subItems.deletedAt)));
 }
