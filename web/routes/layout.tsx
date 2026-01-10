@@ -10,7 +10,7 @@ import {
   SidebarFooter,
 } from "../components/ui-kit/sidebar";
 import { Navbar } from "../components/ui-kit/navbar";
-import { Breadcrumb } from "../components/ui-kit/breadcrumb";
+import { ThemeToggle } from "../components/ThemeToggle";
 import { requireAuth, setAuthCookies } from "../lib/session.server";
 import { getUserById } from "../../db/repositories/users";
 import type { Route } from "./+types/layout";
@@ -91,14 +91,22 @@ export default function Layout() {
             </SidebarSection>
           </SidebarBody>
           <SidebarFooter>
-            <div className="flex flex-col gap-2 px-2 py-2">
-              <span className="truncate text-xs text-zinc-500 dark:text-zinc-400">
-                {user.email}
-              </span>
-              <SidebarItem href="/logout">
-                <SidebarLabel>Sign out</SidebarLabel>
-              </SidebarItem>
+            <ThemeToggle />
+            <div className="flex items-center justify-between p-2">
+              <div className="flex items-center gap-4">
+                {/* <Avatar
+                  className="size-10"
+                  initials={user.firstName ? user.firstName.slice(0, 1) : user.email.slice(0, 1)}
+                /> */}
+                <div>
+                  <div>{user.firstName}</div>
+                  <div className="text-xs opacity-60">{user.email}</div>
+                </div>
+              </div>
             </div>
+            <SidebarItem href="/logout">
+              <SidebarLabel>Sign out</SidebarLabel>
+            </SidebarItem>
           </SidebarFooter>
         </Sidebar>
       }

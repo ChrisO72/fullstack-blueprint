@@ -66,7 +66,7 @@ export function Pagination({
   const basePageClass =
     "relative inline-flex items-center px-4 py-2 text-sm font-semibold focus:z-20 focus:outline-offset-0";
   const currentPageClass =
-    "z-10 border-2 text-white focus-visible:outline-2 focus-visible:outline-offset-2";
+    "z-10 bg-gray-900 border-2 border-gray-900 text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900 dark:bg-white dark:border-white dark:text-gray-900";
   const defaultPageClass =
     "text-gray-900 inset-ring inset-ring-gray-300 hover:bg-gray-50 dark:text-gray-200 dark:inset-ring-gray-700 dark:hover:bg-white/5";
   const ellipsisClass =
