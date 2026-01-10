@@ -43,28 +43,20 @@ npx drizzle-kit studio                           # open database browser
 
 ```bash
 npm install
-npm run dev          # web only
-npm run worker       # worker only
-npm run dev:all      # web + worker
+npx react-router typegen      # generate route types (run after adding/renaming routes)
+make dev
 ```
 
-### Production
+### Production (Docker)
 
 ```bash
-npm install
-npm run build
-npm run start         # web server
-npm run worker        # background worker (separate process)
+make build   # build image
+make run     # run container
+make stop    # stop container
 ```
 
-#### Render Deployment
+Runs web server + worker in a single container on port 3000.
 
-**Web Service:**
+### Render Deployment
 
-- Build: `npm install && npm run build`
-- Start: `npm run start`
-
-**Background Worker** (separate service):
-
-- Build: `npm install`
-- Start: `npm run worker`
+Set runtime to **Docker** — it picks up the `Dockerfile` automatically.

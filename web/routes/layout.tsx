@@ -10,7 +10,7 @@ import {
   SidebarFooter,
 } from "../components/ui-kit/sidebar";
 import { Navbar } from "../components/ui-kit/navbar";
-import { ThemeToggle } from "../components/ThemeToggle";
+import { ThemeToggle } from "../components/theme-toggle";
 import { requireAuth, setAuthCookies } from "../lib/session.server";
 import { getUserById } from "../../db/repositories/users";
 import type { Route } from "./+types/layout";
