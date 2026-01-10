@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, count, eq, isNull } from "drizzle-orm";
 import { db } from "../db";
 import { type InsertItem, items } from "../schema";
 
@@ -43,4 +43,22 @@ export async function getItemsByOrganizationId(organizationId: number) {
     .select()
     .from(items)
     .where(and(eq(items.organizationId, organizationId), isNull(items.deletedAt)));
+}
+
+export async function listItemsByOrgPaginated(organizationId: number, page: number, limit: number) {
+  const offset = (page - 1) * limit;
+  return await db
+    .select()
+    .from(items)
+    .where(and(eq(items.organizationId, organizationId), isNull(items.deletedAt)))
+    .limit(limit)
+    .offset(offset);
+}
+
+export async function countItemsByOrg(organizationId: number) {
+  const [result] = await db
+    .select({ count: count() })
+    .from(items)
+    .where(and(eq(items.organizationId, organizationId), isNull(items.deletedAt)));
+  return result?.count ?? 0;
 }

@@ -1,5 +1,6 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 
 const JWT_SECRET = process.env.JWT_SECRET || "change-me-in-production";
 const REFRESH_SECRET = process.env.REFRESH_SECRET || "change-me-refresh-secret";
@@ -22,7 +23,10 @@ export function generateAccessToken(userId: number, email: string): string {
 }
 
 export function generateRefreshToken(userId: number): string {
-  return jwt.sign({ userId }, REFRESH_SECRET, {
+  // Include a unique jti (JWT ID) to prevent duplicate tokens
+  // when multiple refresh requests occur within the same second
+  const jti = crypto.randomUUID();
+  return jwt.sign({ userId, jti }, REFRESH_SECRET, {
     expiresIn: `${REFRESH_TOKEN_EXPIRY_DAYS}d`,
   });
 }

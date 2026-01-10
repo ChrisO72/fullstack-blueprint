@@ -103,7 +103,7 @@ export default function Layout() {
         </Sidebar>
       }
     >
-      {breadcrumbPages.length > 0 && <Breadcrumb pages={breadcrumbPages} />}
+      {/* {breadcrumbPages.length > 0 && <Breadcrumb pages={breadcrumbPages} />} */}
       <Outlet />
     </SidebarLayout>
   );

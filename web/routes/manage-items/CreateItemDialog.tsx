@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Form, useActionData, useNavigation } from "react-router";
 import { Button } from "../../components/ui-kit/button";
 import {
@@ -18,6 +18,15 @@ export function CreateItemDialog() {
   const actionData = useActionData<ActionData>();
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";
+  const formRef = useRef<HTMLFormElement>(null);
+
+  // Reset form and close dialog on successful submission
+  useEffect(() => {
+    if (navigation.state === "idle" && !actionData?.errors) {
+      formRef.current?.reset();
+      setIsOpen(false);
+    }
+  }, [navigation.state, actionData]);
 
   return (
     <>
@@ -29,8 +38,8 @@ export function CreateItemDialog() {
       <Dialog open={isOpen} onClose={() => setIsOpen(false)}>
         <DialogTitle>Create Item</DialogTitle>
         <DialogDescription>Add a new item to your list.</DialogDescription>
-        <Form method="post">
-          <DialogBody>
+        <DialogBody>
+          <Form ref={formRef} method="post" id="create-item" className="grid grid-cols-1 gap-8">
             <Field>
               <Label>Title</Label>
               <Input
@@ -40,6 +49,7 @@ export function CreateItemDialog() {
                 required
                 disabled={isSubmitting}
                 invalid={!!actionData?.errors?.title}
+                autoFocus
               />
               {actionData?.errors?.title && (
                 <ErrorMessage>{actionData.errors.title[0]}</ErrorMessage>
@@ -58,16 +68,16 @@ export function CreateItemDialog() {
                 <ErrorMessage>{actionData.errors.description[0]}</ErrorMessage>
               )}
             </Field>
-          </DialogBody>
-          <DialogActions>
-            <Button plain onClick={() => setIsOpen(false)} disabled={isSubmitting}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Creating..." : "Create"}
-            </Button>
-          </DialogActions>
-        </Form>
+          </Form>
+        </DialogBody>
+        <DialogActions>
+          <Button plain onClick={() => setIsOpen(false)} disabled={isSubmitting}>
+            Cancel
+          </Button>
+          <Button type="submit" form="create-item" disabled={isSubmitting}>
+            {isSubmitting ? "Creating..." : "Create"}
+          </Button>
+        </DialogActions>
       </Dialog>
     </>
   );

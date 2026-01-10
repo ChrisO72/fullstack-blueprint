@@ -15,26 +15,20 @@ interface BreadcrumbProps {
 
 export function Breadcrumb({ pages }: BreadcrumbProps) {
   return (
-    <nav aria-label="Breadcrumb" className="flex mb-6">
+    <nav
+      aria-label="Breadcrumb"
+      className="mb-5 flex border-b border-zinc-950/10 pb-5 dark:border-white/10"
+    >
       <ol role="list" className="flex items-center space-x-4">
-        <li>
-          <div>
-            <Link
-              to="/"
-              className="text-gray-400 hover:text-gray-500 dark:text-gray-500 dark:hover:text-gray-300"
-            >
-              <HomeIcon aria-hidden="true" className="size-5 shrink-0" />
-              <span className="sr-only">Home</span>
-            </Link>
-          </div>
-        </li>
-        {pages.map((page) => (
+        {pages.map((page, idx) => (
           <li key={page.name}>
             <div className="flex items-center">
-              <ChevronRightIcon
-                aria-hidden="true"
-                className="size-5 shrink-0 text-gray-400 dark:text-gray-500"
-              />
+              {idx > 0 && (
+                <ChevronRightIcon
+                  aria-hidden="true"
+                  className="size-5 shrink-0 text-gray-400 dark:text-gray-500"
+                />
+              )}
               <Link
                 to={page.href}
                 aria-current={page.current ? "page" : undefined}
