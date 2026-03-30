@@ -1,7 +1,14 @@
-.DS_Store
-.env
-/node_modules/
+node_modules
 
-# React Router
-/.react-router/
-/build/
+# Build
+build
+.react-router
+.vite
+
+# Env
+.env
+.env.*
+!.env.example
+
+# OS
+.DS_Store

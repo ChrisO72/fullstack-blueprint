@@ -1,5 +1,5 @@
 {
-  "name": "smartpr-labs",
+  "name": "fullstack-blueprint",
   "private": true,
   "type": "module",
   "scripts": {
@@ -12,6 +12,9 @@
     "start": "node build/worker.js & react-router-serve ./build/server/index.js",
     "start:web": "react-router-serve ./build/server/index.js",
     "start:worker": "node build/worker.js",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio",
     "typecheck": "react-router typegen && tsc",
     "check": "eslint . && prettier --check ."
   },

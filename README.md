@@ -1,32 +1,36 @@
 # Fullstack Blueprint
 
-A template for building full-stack Node + React applications
+A template for building full-stack Node + React applications.
 
-## Comes with:
+## Tech stack
 
-- React Router 7 SSR web app
+- React Router 7 (SSR) + Tailwind + Catalyst UI
 - Drizzle ORM + PostgreSQL
-- BullMQ job queues + scheduler (Redis)
-- JWT auth with refresh tokens
-- Multi-org user system
-- Catalyst UI Kit
+- BullMQ job queues + Redis
+- JWT auth with refresh tokens + multi-org support
 
-## Setup
+## Prerequisites
+
+- Node.js 20+
+- Docker (for local Postgres + Redis)
+
+## Getting started
 
 ```bash
-# Environment variables
+npm install
+cp .env.example .env   # fill in your keys
+docker compose up -d    # local Postgres + Redis
+npm run db:migrate # apply migrations
+npm run dev
+```
 
-# Auth
+### Environment variables
+
+```bash
 JWT_SECRET=your-secret-key
 REFRESH_SECRET=your-refresh-secret
-
-# Database
 DATABASE_URL=postgresql://user:password@host:port/database?sslmode=require
-
-# Redis
-REDIS_URL=redis://default:password@host:port
-
-# API Keys
+REDIS_URL=redis://localhost:6379
 HIKER_API_KEY=your-hiker-api-key
 GOOGLE_API_KEY=your-google-api-key
 ```
@@ -39,24 +43,9 @@ npx drizzle-kit migrate                          # apply migrations
 npx drizzle-kit studio                           # open database browser
 ```
 
-### Development
+Local Postgres runs on `127.0.0.1:55432` and Redis on `127.0.0.1:6379` via Docker Compose.
 
 ```bash
-npm install
-npx react-router typegen      # generate route types (run after adding/renaming routes)
-make dev
+docker compose down      # stop
+docker compose down -v   # stop and wipe data
 ```
-
-### Production (Docker)
-
-```bash
-make build   # build image
-make run     # run container
-make stop    # stop container
-```
-
-Runs web server + worker in a single container on port 3000.
-
-### Render Deployment
-
-Set runtime to **Docker** — it picks up the `Dockerfile` automatically.

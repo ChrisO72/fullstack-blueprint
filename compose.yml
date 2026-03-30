@@ -1,0 +1,30 @@
+name: fullstack-blueprint
+
+networks:
+  default:
+    name: fullstack-blueprint
+
+volumes:
+  pgdata:
+  redisdata:
+
+services:
+  database:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_DB: "blueprint"
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-blueprint-password}
+      POSTGRES_USER: ${POSTGRES_USER:-blueprint-user}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:55432:5432"
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    volumes:
+      - redisdata:/data
+    ports:
+      - "127.0.0.1:6379:6379"
