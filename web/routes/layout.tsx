@@ -88,6 +88,11 @@ export default function Layout() {
               <SidebarItem href="/manage-items" current={pathname.startsWith("/manage-items")}>
                 <SidebarLabel>Manage Items</SidebarLabel>
               </SidebarItem>
+              {user.role === "admin" && (
+                <SidebarItem href="/admin" current={pathname.startsWith("/admin")}>
+                  <SidebarLabel>Admin</SidebarLabel>
+                </SidebarItem>
+              )}
             </SidebarSection>
           </SidebarBody>
           <SidebarFooter>

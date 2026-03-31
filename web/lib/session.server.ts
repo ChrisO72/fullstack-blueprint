@@ -1,6 +1,7 @@
 import { redirect } from "react-router";
 import { verifyAccessToken } from "./auth.server";
 import { refreshAccessToken } from "../../db/repositories/auth";
+import { getUserById } from "../../db/repositories/users";
 
 export function parseCookies(cookieHeader: string): Record<string, string> {
   const cookies: Record<string, string> = {};
@@ -49,6 +50,15 @@ export async function requireAuth(request: Request) {
   }
 
   throw redirect("/login");
+}
+
+export async function requireAdmin(request: Request) {
+  const auth = await requireAuth(request);
+  const user = await getUserById(auth.userId);
+  if (!user || user.role !== "admin") {
+    throw redirect("/");
+  }
+  return { auth, user };
 }
 
 export function setAuthCookies(accessToken: string, refreshToken: string): string[] {

@@ -1,4 +1,4 @@
-import { index, integer, pgTable, text, timestamp, varchar } from "drizzle-orm/pg-core";
+import { boolean, index, integer, pgTable, text, timestamp, varchar } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
 const timestamps = {
@@ -110,3 +110,13 @@ export type InsertSubItem = typeof subItems.$inferInsert;
 
 export type SelectRefreshToken = typeof refreshTokens.$inferSelect;
 export type InsertRefreshToken = typeof refreshTokens.$inferInsert;
+
+export const siteSettings = pgTable("site_settings", {
+  id: integer().primaryKey().generatedAlwaysAsIdentity(),
+  allowedDomains: text("allowed_domains").array().notNull().default([]),
+  requireMailConfirmation: boolean("require_mail_confirmation").notNull().default(false),
+  ...timestamps,
+});
+
+export type SelectSiteSettings = typeof siteSettings.$inferSelect;
+export type InsertSiteSettings = typeof siteSettings.$inferInsert;

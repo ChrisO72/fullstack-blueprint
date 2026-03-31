@@ -12,5 +12,9 @@ export default [
     route("do-things", "routes/do-things/index.tsx"),
     route("manage-items", "routes/manage-items/index.tsx"),
     route("manage-items/:item", "routes/manage-items/item.tsx"),
+    layout("routes/admin/layout.tsx", [
+      route("admin", "routes/admin/index.tsx"),
+      route("admin/users", "routes/admin/users.tsx"),
+    ]),
   ]),
 ] satisfies RouteConfig;

@@ -1,4 +1,4 @@
-import { eq, and, gt } from "drizzle-orm";
+import { eq, and, gt, count } from "drizzle-orm";
 import { db } from "../db";
 import { users, refreshTokens, organizations } from "../schema";
 import {
@@ -17,6 +17,9 @@ export async function getUserByEmail(email: string) {
 export async function createUserWithPassword(email: string, password: string, firstname?: string) {
   const passwordHash = await hashPassword(password);
 
+  const [{ count: userCount }] = await db.select({ count: count() }).from(users);
+  const isFirstUser = userCount === 0;
+
   // Create a personal organization for the user
   const [org] = await db
     .insert(organizations)
@@ -32,6 +35,7 @@ export async function createUserWithPassword(email: string, password: string, fi
       passwordHash,
       firstName: firstname || null,
       organizationId: org.id,
+      role: isFirstUser ? "admin" : "user",
     })
     .returning();
 
