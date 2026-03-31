@@ -7,6 +7,7 @@ import { Heading } from "../../components/ui-kit/heading";
 import { Input } from "../../components/ui-kit/input";
 import { Strong, Text, TextLink } from "../../components/ui-kit/text";
 import { validateLogin, createTokens } from "../../../db/repositories/auth";
+import { getSiteSettings } from "../../../db/repositories/settings";
 import { setAuthCookies } from "../../lib/session.server";
 import type { Route } from "./+types/login";
 
@@ -47,6 +48,11 @@ export async function action({ request }: Route.ActionArgs): Promise<ActionData 
   const user = await validateLogin(email, password);
   if (!user) {
     return { formError: "Invalid email or password" };
+  }
+
+  const settings = await getSiteSettings();
+  if (settings.requireMailConfirmation && !user.emailConfirmedAt) {
+    return redirect(`/check-email?email=${encodeURIComponent(email)}`);
   }
 
   const { accessToken, refreshToken } = await createTokens(user.id, user.email);

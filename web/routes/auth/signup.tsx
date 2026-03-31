@@ -10,8 +10,11 @@ import {
   getUserByEmail,
   createUserWithPassword,
   createTokens,
+  createEmailConfirmationToken,
 } from "../../../db/repositories/auth";
+import { getSiteSettings } from "../../../db/repositories/settings";
 import { setAuthCookies } from "../../lib/session.server";
+import { sendConfirmationEmail } from "../../lib/mail.server";
 import type { Route } from "./+types/signup";
 
 const signupSchema = z.object({
@@ -49,12 +52,36 @@ export async function action({ request }: Route.ActionArgs): Promise<ActionData 
 
   const { email, firstname, password } = result.data;
 
+  const settings = await getSiteSettings();
+
+  if (settings.allowedDomains.length > 0) {
+    const domain = email.split("@")[1]?.toLowerCase();
+    if (!domain || !settings.allowedDomains.includes(domain)) {
+      return { formError: "Signups from this email domain are not allowed" };
+    }
+  }
+
   const existing = await getUserByEmail(email);
+
   if (existing) {
+    if (settings.requireMailConfirmation && !existing.emailConfirmedAt) {
+      return redirect(`/check-email?email=${encodeURIComponent(email)}`);
+    }
     return { fieldErrors: { email: ["An account with this email already exists"] } };
   }
 
   const user = await createUserWithPassword(email, password, firstname);
+
+  if (settings.requireMailConfirmation) {
+    const token = await createEmailConfirmationToken(user.id);
+    try {
+      await sendConfirmationEmail(email, token);
+    } catch {
+      return { formError: "Something went wrong sending the confirmation email. Please try again later." };
+    }
+    return redirect(`/check-email?email=${encodeURIComponent(email)}`);
+  }
+
   const { accessToken, refreshToken } = await createTokens(user.id, user.email);
   const cookies = setAuthCookies(accessToken, refreshToken);
 

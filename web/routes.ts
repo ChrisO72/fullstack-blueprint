@@ -5,6 +5,8 @@ export default [
   route("login", "routes/auth/login.tsx"),
   route("signup", "routes/auth/signup.tsx"),
   route("logout", "routes/auth/logout.tsx"),
+  route("check-email", "routes/auth/check-email.tsx"),
+  route("confirm-email", "routes/auth/confirm-email.tsx"),
 
   // Protected routes
   layout("routes/layout.tsx", [

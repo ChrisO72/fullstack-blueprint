@@ -1,6 +1,7 @@
-import { eq, and, gt, count } from "drizzle-orm";
+import crypto from "crypto";
+import { eq, and, gt, count, desc } from "drizzle-orm";
 import { db } from "../db";
-import { users, refreshTokens, organizations } from "../schema";
+import { users, refreshTokens, organizations, emailConfirmationTokens } from "../schema";
 import {
   hashPassword,
   verifyPassword,
@@ -97,4 +98,49 @@ export async function refreshAccessToken(token: string) {
 
 export async function deleteRefreshToken(token: string) {
   await db.delete(refreshTokens).where(eq(refreshTokens.token, token));
+}
+
+const CONFIRMATION_TOKEN_EXPIRY_HOURS = 24;
+
+export async function createEmailConfirmationToken(userId: number): Promise<string> {
+  const token = crypto.randomUUID();
+  const expiresAt = new Date(
+    Date.now() + CONFIRMATION_TOKEN_EXPIRY_HOURS * 60 * 60 * 1000,
+  );
+
+  await db.insert(emailConfirmationTokens).values({ userId, token, expiresAt });
+  return token;
+}
+
+export async function verifyEmailConfirmationToken(token: string) {
+  const [row] = await db
+    .select()
+    .from(emailConfirmationTokens)
+    .where(
+      and(
+        eq(emailConfirmationTokens.token, token),
+        gt(emailConfirmationTokens.expiresAt, new Date()),
+      ),
+    )
+    .limit(1);
+
+  if (!row) return null;
+
+  const [user] = await db.select().from(users).where(eq(users.id, row.userId)).limit(1);
+  return user ?? null;
+}
+
+export async function getLatestConfirmationTokenCreatedAt(userId: number): Promise<Date | null> {
+  const [row] = await db
+    .select({ createdAt: emailConfirmationTokens.createdAt })
+    .from(emailConfirmationTokens)
+    .where(eq(emailConfirmationTokens.userId, userId))
+    .orderBy(desc(emailConfirmationTokens.createdAt))
+    .limit(1);
+  return row?.createdAt ?? null;
+}
+
+export async function confirmUserEmail(userId: number, token: string) {
+  await db.update(users).set({ emailConfirmedAt: new Date() }).where(eq(users.id, userId));
+  await db.delete(emailConfirmationTokens).where(eq(emailConfirmationTokens.token, token));
 }

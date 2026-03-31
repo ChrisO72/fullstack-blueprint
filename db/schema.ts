@@ -17,6 +17,7 @@ export const users = pgTable("users", {
   passwordHash: varchar("password_hash", { length: 255 }),
   firstName: varchar("first_name", { length: 100 }),
   lastName: varchar("last_name", { length: 100 }),
+  emailConfirmedAt: timestamp("email_confirmed_at"),
   role: varchar({ enum: ["admin", "user", "viewer"] })
     .notNull()
     .default("user"),
@@ -110,6 +111,19 @@ export type InsertSubItem = typeof subItems.$inferInsert;
 
 export type SelectRefreshToken = typeof refreshTokens.$inferSelect;
 export type InsertRefreshToken = typeof refreshTokens.$inferInsert;
+
+export const emailConfirmationTokens = pgTable("email_confirmation_tokens", {
+  id: integer().primaryKey().generatedAlwaysAsIdentity(),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  token: varchar({ length: 255 }).notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type SelectEmailConfirmationToken = typeof emailConfirmationTokens.$inferSelect;
+export type InsertEmailConfirmationToken = typeof emailConfirmationTokens.$inferInsert;
 
 export const siteSettings = pgTable("site_settings", {
   id: integer().primaryKey().generatedAlwaysAsIdentity(),
