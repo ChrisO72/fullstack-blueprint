@@ -7,15 +7,15 @@ export async function insertRefreshToken(data: InsertRefreshToken) {
   return row;
 }
 
-export async function findRefreshToken(token: string) {
+export async function findRefreshTokenByHash(tokenHash: string) {
   const [row] = await db
     .select()
     .from(refreshTokens)
-    .where(and(eq(refreshTokens.token, token), gt(refreshTokens.expiresAt, new Date())))
+    .where(and(eq(refreshTokens.tokenHash, tokenHash), gt(refreshTokens.expiresAt, new Date())))
     .limit(1);
   return row ?? null;
 }
 
-export async function deleteRefreshToken(token: string) {
-  await db.delete(refreshTokens).where(eq(refreshTokens.token, token));
+export async function deleteRefreshTokenByHash(tokenHash: string) {
+  await db.delete(refreshTokens).where(eq(refreshTokens.tokenHash, tokenHash));
 }

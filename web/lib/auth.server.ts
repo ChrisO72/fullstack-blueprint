@@ -10,8 +10,8 @@ import {
   updateUser,
 } from "../../db/repositories/users";
 import {
-  deleteRefreshToken,
-  findRefreshToken,
+  deleteRefreshTokenByHash,
+  findRefreshTokenByHash,
   insertRefreshToken,
 } from "../../db/repositories/refreshTokens";
 import {
@@ -70,6 +70,12 @@ export function getRefreshTokenExpiry(): Date {
   return new Date(Date.now() + REFRESH_TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
 }
 
+// Refresh tokens are stored hashed at rest so a DB leak can't be replayed
+// against the auth endpoint. The raw JWT only ever lives in the user's cookie.
+export function hashRefreshToken(token: string): string {
+  return crypto.createHash("sha256").update(token).digest("hex");
+}
+
 export async function validateLogin(email: string, password: string) {
   const user = await getUserByEmail(email);
   if (!user || !user.passwordHash) return null;
@@ -103,7 +109,7 @@ export async function createTokens(userId: number, email: string) {
 
   await insertRefreshToken({
     userId,
-    token: refreshToken,
+    tokenHash: hashRefreshToken(refreshToken),
     expiresAt: getRefreshTokenExpiry(),
   });
 
@@ -111,14 +117,15 @@ export async function createTokens(userId: number, email: string) {
 }
 
 export async function refreshAccessToken(token: string) {
-  const stored = await findRefreshToken(token);
+  const tokenHash = hashRefreshToken(token);
+  const stored = await findRefreshTokenByHash(tokenHash);
   if (!stored) return null;
 
   const user = await getUserById(stored.userId);
   if (!user) return null;
 
   // Rotate: invalidate the old token and issue a new pair
-  await deleteRefreshToken(token);
+  await deleteRefreshTokenByHash(tokenHash);
   const { accessToken, refreshToken } = await createTokens(user.id, user.email);
 
   return { accessToken, refreshToken, user };
