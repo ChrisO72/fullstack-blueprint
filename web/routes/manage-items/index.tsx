@@ -6,7 +6,7 @@ import {
   softDeleteItem,
 } from "~/db/repositories/items";
 import { requireAuth } from "~/lib/session.server";
-import { Heading } from "../../components/ui-kit/heading";
+import { Heading } from "~/components/ui-kit/heading";
 import {
   Table,
   TableBody,
@@ -14,16 +14,11 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "../../components/ui-kit/table";
+} from "~/components/ui-kit/table";
 import { CreateItemDialog } from "./CreateItemDialog";
 import { Pagination } from "./Pagination";
 import { redirect, useSubmit } from "react-router";
-import {
-  Dropdown,
-  DropdownButton,
-  DropdownItem,
-  DropdownMenu,
-} from "../../components/ui-kit/dropdown";
+import { Dropdown, DropdownButton, DropdownItem, DropdownMenu } from "~/components/ui-kit/dropdown";
 import { EllipsisHorizontalIcon } from "@heroicons/react/16/solid";
 import { z } from "zod";
 import { parseForm, type FieldErrors } from "~/lib/form";

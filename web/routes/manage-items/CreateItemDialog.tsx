@@ -1,16 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import { Form, useActionData, useNavigation } from "react-router";
-import { Button } from "../../components/ui-kit/button";
+import { Button } from "~/components/ui-kit/button";
 import {
   Dialog,
   DialogActions,
   DialogBody,
   DialogDescription,
   DialogTitle,
-} from "../../components/ui-kit/dialog";
-import { Field, Label } from "../../components/ui-kit/fieldset";
-import { FieldError } from "../../components/field-error";
-import { Input } from "../../components/ui-kit/input";
+} from "~/components/ui-kit/dialog";
+import { Field, Label } from "~/components/ui-kit/fieldset";
+import { FieldError } from "~/components/field-error";
+import { Input } from "~/components/ui-kit/input";
 import { PlusIcon } from "@heroicons/react/24/outline";
 import type { ActionData } from "./index";
 

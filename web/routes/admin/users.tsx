@@ -1,7 +1,7 @@
 import type { Route } from "./+types/users";
 import { listUsers, softDeleteUser, updateUser } from "~/db/repositories/users";
 import { requireAdmin } from "~/lib/session.server";
-import { Heading } from "../../components/ui-kit/heading";
+import { Heading } from "~/components/ui-kit/heading";
 import {
   Table,
   TableBody,
@@ -9,17 +9,12 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "../../components/ui-kit/table";
+} from "~/components/ui-kit/table";
 import { redirect, useFetcher, useSubmit } from "react-router";
-import {
-  Dropdown,
-  DropdownButton,
-  DropdownItem,
-  DropdownMenu,
-} from "../../components/ui-kit/dropdown";
+import { Dropdown, DropdownButton, DropdownItem, DropdownMenu } from "~/components/ui-kit/dropdown";
 import { EllipsisHorizontalIcon } from "@heroicons/react/16/solid";
 import { z } from "zod";
-import { Select } from "../../components/ui-kit/select";
+import { Select } from "~/components/ui-kit/select";
 import { parseForm } from "~/lib/form";
 
 const ROLES = ["admin", "user", "viewer"] as const;

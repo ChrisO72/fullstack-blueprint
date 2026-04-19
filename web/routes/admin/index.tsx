@@ -4,12 +4,12 @@ import { z } from "zod";
 import type { Route } from "./+types/index";
 import { requireAdmin } from "~/lib/session.server";
 import { getSiteSettings, updateSiteSettings } from "~/db/repositories/settings";
-import { Heading } from "../../components/ui-kit/heading";
-import { Description, Field, FieldGroup, Fieldset, Label } from "../../components/ui-kit/fieldset";
-import { Input } from "../../components/ui-kit/input";
-import { Button } from "../../components/ui-kit/button";
-import { Switch, SwitchField } from "../../components/ui-kit/switch";
-import { Badge } from "../../components/ui-kit/badge";
+import { Heading } from "~/components/ui-kit/heading";
+import { Description, Field, FieldGroup, Fieldset, Label } from "~/components/ui-kit/fieldset";
+import { Input } from "~/components/ui-kit/input";
+import { Button } from "~/components/ui-kit/button";
+import { Switch, SwitchField } from "~/components/ui-kit/switch";
+import { Badge } from "~/components/ui-kit/badge";
 import { XMarkIcon } from "@heroicons/react/16/solid";
 
 const settingsSchema = z.object({

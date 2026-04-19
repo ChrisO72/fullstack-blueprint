@@ -1,21 +1,22 @@
 import { useState, useEffect } from "react";
 import { redirect, useFetcher } from "react-router";
-import { AuthLayout } from "../../components/ui-kit/auth-layout";
-import { Button } from "../../components/ui-kit/button";
-import { Heading } from "../../components/ui-kit/heading";
-import { Strong, Text, TextLink } from "../../components/ui-kit/text";
-import { getUserByEmail } from "../../../db/repositories/users";
-import { getLatestEmailConfirmationTokenCreatedAt } from "../../../db/repositories/emailConfirmationTokens";
-import { createEmailConfirmationToken } from "../../lib/auth.server";
-import { sendConfirmationEmail } from "../../lib/mail.server";
+import { AuthLayout } from "~/components/ui-kit/auth-layout";
+import { Button } from "~/components/ui-kit/button";
+import { Heading } from "~/components/ui-kit/heading";
+import { Strong, Text, TextLink } from "~/components/ui-kit/text";
+import { getUserByEmail } from "~/db/repositories/users";
+import { getLatestEmailConfirmationTokenCreatedAt } from "~/db/repositories/emailConfirmationTokens";
+import { createEmailConfirmationToken, verifyAccessToken } from "~/lib/auth.server";
+import { sendConfirmationEmail } from "~/lib/mail.server";
+import { readAccessTokenCookie } from "~/lib/session.server";
 import type { Route } from "./+types/check-email";
 
 // const RESEND_COOLDOWN_MS = 5 * 60 * 1000;
 const RESEND_COOLDOWN_MS = 5;
 
 export async function loader({ request }: Route.LoaderArgs) {
-  const cookieHeader = request.headers.get("Cookie") || "";
-  if (cookieHeader.includes("accessToken=")) {
+  const accessToken = await readAccessTokenCookie(request);
+  if (accessToken && verifyAccessToken(accessToken)) {
     return redirect("/");
   }
 

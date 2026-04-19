@@ -1,5 +1,5 @@
 import { Lettermint } from "lettermint";
-import { env } from "../../env.server";
+import { env } from "~/env.server";
 
 const lettermint = new Lettermint({
   apiToken: env.LETTERMINT_API_KEY,

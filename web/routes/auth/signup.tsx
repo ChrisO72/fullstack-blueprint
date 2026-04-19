@@ -1,22 +1,23 @@
 import { Form, redirect, useActionData, useNavigation } from "react-router";
 import { z } from "zod";
-import { AuthLayout } from "../../components/ui-kit/auth-layout";
-import { Button } from "../../components/ui-kit/button";
-import { FieldError } from "../../components/field-error";
-import { Field, Label } from "../../components/ui-kit/fieldset";
-import { Heading } from "../../components/ui-kit/heading";
-import { Input } from "../../components/ui-kit/input";
-import { Strong, Text, TextLink } from "../../components/ui-kit/text";
-import { getSiteSettings } from "../../../db/repositories/settings";
-import { getUserByEmail } from "../../../db/repositories/users";
+import { AuthLayout } from "~/components/ui-kit/auth-layout";
+import { Button } from "~/components/ui-kit/button";
+import { FieldError } from "~/components/field-error";
+import { Field, Label } from "~/components/ui-kit/fieldset";
+import { Heading } from "~/components/ui-kit/heading";
+import { Input } from "~/components/ui-kit/input";
+import { Strong, Text, TextLink } from "~/components/ui-kit/text";
+import { getSiteSettings } from "~/db/repositories/settings";
+import { getUserByEmail } from "~/db/repositories/users";
 import {
   createEmailConfirmationToken,
   createTokens,
   createUserWithPassword,
-} from "../../lib/auth.server";
-import { parseForm, type FieldErrors } from "../../lib/form";
-import { readAccessTokenCookie, setAuthCookies } from "../../lib/session.server";
-import { sendConfirmationEmail } from "../../lib/mail.server";
+  verifyAccessToken,
+} from "~/lib/auth.server";
+import { parseForm, type FieldErrors } from "~/lib/form";
+import { readAccessTokenCookie, setAuthCookies } from "~/lib/session.server";
+import { sendConfirmationEmail } from "~/lib/mail.server";
 import type { Route } from "./+types/signup";
 
 const signupSchema = z.object({
@@ -32,7 +33,7 @@ type ActionData = {
 
 export async function loader({ request }: Route.LoaderArgs) {
   const accessToken = await readAccessTokenCookie(request);
-  if (accessToken) {
+  if (accessToken && verifyAccessToken(accessToken)) {
     return redirect("/");
   }
   return null;

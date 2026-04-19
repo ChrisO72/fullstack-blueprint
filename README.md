@@ -46,10 +46,12 @@ npm run db:studio                              # open Drizzle Studio browser
 
 ```bash
 npm run build                  # build web + worker
-npm run start                  # serve both (or run separately below)
 npm run start:web              # web server only
 npm run start:worker           # background worker only
+npm run start                  # run both via concurrently (single-box / smoke test)
 ```
+
+For real deployments, run `start:web` and `start:worker` as separate processes under a supervisor (Docker, Kubernetes etc.) so each gets its own logs, restart policy, and scaling. `npm start` uses `concurrently --kill-others-on-fail`, so a crash in either process tears the other down — useful for local prod-like runs, but no substitute for a supervisor.
 
 Set `DATABASE_URL` and `REDIS_URL` to your managed instances. See `.env.example` for all required variables.
 
@@ -69,7 +71,7 @@ npm run check                  # typecheck + lint + format (required pre-commit 
 
 ## Conventions
 
-- **Path aliases** (see [tsconfig.json](tsconfig.json)): `~/*` → `web/*`, `~/db/*` → `db/*`.
+- **Path aliases** (see [tsconfig.json](tsconfig.json)): `~/*` → `web/*`, `~/db/*` → `db/*`, `~/env.server` → [env.server.ts](env.server.ts). Use these for any cross-package or multi-level import; single-parent relative paths (`./foo`, `../foo`) are fine for siblings inside the same package. ESLint's `no-restricted-imports` blocks anything starting with `../../` to keep this consistent.
 - **Server-only modules end in `.server.ts`** and must never be imported from client components (e.g. [web/lib/auth.server.ts](web/lib/auth.server.ts), [web/lib/session.server.ts](web/lib/session.server.ts)).
 - **Generated dirs**: `.react-router/`, `build/`, and `db/drizzle/` are generated — `db/drizzle/` by `npm run db:generate`.
 - **Secrets**: `.env` is git-ignored; use `.env.example` for the schema. All env vars are validated at boot in [env.server.ts](env.server.ts)

@@ -1,25 +1,25 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
-import { env } from "../../env.server";
-import { createOrganization } from "../../db/repositories/organizations";
+import { env } from "~/env.server";
+import { createOrganization } from "~/db/repositories/organizations";
 import {
   countUsers,
   createUser,
   getUserByEmail,
   getUserById,
   updateUser,
-} from "../../db/repositories/users";
+} from "~/db/repositories/users";
 import {
   deleteRefreshTokenByHash,
   findRefreshTokenByHash,
   insertRefreshToken,
-} from "../../db/repositories/refreshTokens";
+} from "~/db/repositories/refreshTokens";
 import {
   deleteEmailConfirmationToken,
   findEmailConfirmationToken,
   insertEmailConfirmationToken,
-} from "../../db/repositories/emailConfirmationTokens";
+} from "~/db/repositories/emailConfirmationTokens";
 
 const JWT_SECRET = env.JWT_SECRET;
 const REFRESH_SECRET = env.REFRESH_SECRET;

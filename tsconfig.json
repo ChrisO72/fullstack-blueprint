@@ -11,7 +11,8 @@
     "baseUrl": ".",
     "paths": {
       "~/*": ["./web/*"],
-      "~/db/*": ["./db/*"]
+      "~/db/*": ["./db/*"],
+      "~/env.server": ["./env.server.ts"]
     },
     "esModuleInterop": true,
     "verbatimModuleSyntax": true,
