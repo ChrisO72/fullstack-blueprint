@@ -72,6 +72,6 @@ npm run check                  # typecheck + lint + format (required pre-commit 
 - **Path aliases** (see [tsconfig.json](tsconfig.json)): `~/*` → `web/*`, `~/db/*` → `db/*`.
 - **Server-only modules end in `.server.ts`** and must never be imported from client components (e.g. [web/lib/auth.server.ts](web/lib/auth.server.ts), [web/lib/session.server.ts](web/lib/session.server.ts)).
 - **Generated dirs**: `.react-router/`, `build/`, and `db/drizzle/` are generated — `db/drizzle/` by `npm run db:generate`.
-- **Secrets**: `.env` is git-ignored; use `.env.example` for the schema.
+- **Secrets**: `.env` is git-ignored; use `.env.example` for the schema. All env vars are validated at boot in [env.server.ts](env.server.ts)
 - **TypeScript strict** is on across the repo.
 - **DB access goes through repositories** in [db/repositories/](db/repositories/), one file per table.

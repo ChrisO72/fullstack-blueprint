@@ -5,9 +5,10 @@ import {
   refreshAccessToken,
   verifyAccessToken,
 } from "./auth.server";
+import { env } from "../../env.server";
 import { getUserById } from "../../db/repositories/users";
 
-const isProduction = process.env.NODE_ENV === "production";
+const isProduction = env.NODE_ENV === "production";
 
 export const accessTokenCookie = createCookie("accessToken", {
   httpOnly: true,

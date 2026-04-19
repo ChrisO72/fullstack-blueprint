@@ -1,6 +1,7 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
+import { env } from "../../env.server";
 import { createOrganization } from "../../db/repositories/organizations";
 import {
   countUsers,
@@ -20,8 +21,8 @@ import {
   insertEmailConfirmationToken,
 } from "../../db/repositories/emailConfirmationTokens";
 
-const JWT_SECRET = process.env.JWT_SECRET || "change-me-in-production";
-const REFRESH_SECRET = process.env.REFRESH_SECRET || "change-me-refresh-secret";
+const JWT_SECRET = env.JWT_SECRET;
+const REFRESH_SECRET = env.REFRESH_SECRET;
 
 // Token lifetimes in seconds. These are the single source of truth for both
 // JWT `expiresIn` and the cookie `maxAge` (see session.server.ts).

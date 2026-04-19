@@ -1,13 +1,14 @@
 import { Lettermint } from "lettermint";
+import { env } from "../../env.server";
 
 const lettermint = new Lettermint({
-  apiToken: process.env.LETTERMINT_API_KEY!,
+  apiToken: env.LETTERMINT_API_KEY,
 });
 
-const from = process.env.MAIL_FROM || "noreply@example.com";
+const from = env.MAIL_FROM;
 
 export async function sendConfirmationEmail(to: string, token: string) {
-  const confirmUrl = `${process.env.APP_URL}/confirm-email?token=${token}`;
+  const confirmUrl = `${env.APP_URL}/confirm-email?token=${token}`;
 
   console.log(`[mail] sending confirmation email to ${to}`);
 
