@@ -23,8 +23,10 @@ import {
 const JWT_SECRET = process.env.JWT_SECRET || "change-me-in-production";
 const REFRESH_SECRET = process.env.REFRESH_SECRET || "change-me-refresh-secret";
 
-const ACCESS_TOKEN_EXPIRY = "15m";
-const REFRESH_TOKEN_EXPIRY_DAYS = 7;
+// Token lifetimes in seconds. These are the single source of truth for both
+// JWT `expiresIn` and the cookie `maxAge` (see session.server.ts).
+export const ACCESS_TOKEN_MAX_AGE = 15 * 60;
+export const REFRESH_TOKEN_MAX_AGE = 7 * 24 * 60 * 60;
 const CONFIRMATION_TOKEN_EXPIRY_HOURS = 24;
 
 export async function hashPassword(password: string): Promise<string> {
@@ -37,7 +39,7 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
 
 export function generateAccessToken(userId: number, email: string): string {
   return jwt.sign({ userId, email }, JWT_SECRET, {
-    expiresIn: ACCESS_TOKEN_EXPIRY,
+    expiresIn: ACCESS_TOKEN_MAX_AGE,
   });
 }
 
@@ -46,7 +48,7 @@ export function generateRefreshToken(userId: number): string {
   // when multiple refresh requests occur within the same second
   const jti = crypto.randomUUID();
   return jwt.sign({ userId, jti }, REFRESH_SECRET, {
-    expiresIn: `${REFRESH_TOKEN_EXPIRY_DAYS}d`,
+    expiresIn: REFRESH_TOKEN_MAX_AGE,
   });
 }
 
@@ -67,7 +69,7 @@ export function verifyRefreshToken(token: string): { userId: number } | null {
 }
 
 export function getRefreshTokenExpiry(): Date {
-  return new Date(Date.now() + REFRESH_TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
+  return new Date(Date.now() + REFRESH_TOKEN_MAX_AGE * 1000);
 }
 
 // Refresh tokens are stored hashed at rest so a DB leak can't be replayed

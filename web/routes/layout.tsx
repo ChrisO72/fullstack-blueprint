@@ -25,7 +25,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 
   // If we got new tokens from refresh, set both cookies
   if (auth.newAccessToken && auth.newRefreshToken) {
-    const cookies = setAuthCookies(auth.newAccessToken, auth.newRefreshToken);
+    const cookies = await setAuthCookies(auth.newAccessToken, auth.newRefreshToken);
     const headers = new Headers();
     cookies.forEach((cookie) => headers.append("Set-Cookie", cookie));
     return Response.json({ user }, { headers });

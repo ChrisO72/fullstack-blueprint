@@ -13,7 +13,7 @@ import {
   createTokens,
   createUserWithPassword,
 } from "../../lib/auth.server";
-import { setAuthCookies } from "../../lib/session.server";
+import { readAccessTokenCookie, setAuthCookies } from "../../lib/session.server";
 import { sendConfirmationEmail } from "../../lib/mail.server";
 import type { Route } from "./+types/signup";
 
@@ -29,8 +29,8 @@ type ActionData = {
 };
 
 export async function loader({ request }: Route.LoaderArgs) {
-  const cookieHeader = request.headers.get("Cookie") || "";
-  if (cookieHeader.includes("accessToken=")) {
+  const accessToken = await readAccessTokenCookie(request);
+  if (accessToken) {
     return redirect("/");
   }
   return null;
@@ -85,7 +85,7 @@ export async function action({ request }: Route.ActionArgs): Promise<ActionData 
   }
 
   const { accessToken, refreshToken } = await createTokens(user.id, user.email);
-  const cookies = setAuthCookies(accessToken, refreshToken);
+  const cookies = await setAuthCookies(accessToken, refreshToken);
 
   return redirect("/", {
     headers: cookies.map((cookie) => ["Set-Cookie", cookie] as [string, string]),

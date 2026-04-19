@@ -1,26 +1,49 @@
-import { redirect } from "react-router";
-import { refreshAccessToken, verifyAccessToken } from "./auth.server";
+import { createCookie, redirect } from "react-router";
+import {
+  ACCESS_TOKEN_MAX_AGE,
+  REFRESH_TOKEN_MAX_AGE,
+  refreshAccessToken,
+  verifyAccessToken,
+} from "./auth.server";
 import { getUserById } from "../../db/repositories/users";
 
-export function parseCookies(cookieHeader: string): Record<string, string> {
-  const cookies: Record<string, string> = {};
-  if (!cookieHeader) return cookies;
+const isProduction = process.env.NODE_ENV === "production";
 
-  for (const cookie of cookieHeader.split("; ")) {
-    const [name, ...rest] = cookie.split("=");
-    if (name && rest.length > 0) {
-      cookies[name] = rest.join("=");
-    }
-  }
-  return cookies;
+export const accessTokenCookie = createCookie("accessToken", {
+  httpOnly: true,
+  sameSite: "lax",
+  secure: isProduction,
+  path: "/",
+  maxAge: ACCESS_TOKEN_MAX_AGE,
+});
+
+export const refreshTokenCookie = createCookie("refreshToken", {
+  httpOnly: true,
+  sameSite: "lax",
+  secure: isProduction,
+  path: "/",
+  maxAge: REFRESH_TOKEN_MAX_AGE,
+});
+
+async function readAuthCookies(request: Request) {
+  const cookieHeader = request.headers.get("Cookie");
+  const [accessToken, refreshToken] = await Promise.all([
+    accessTokenCookie.parse(cookieHeader) as Promise<string | null>,
+    refreshTokenCookie.parse(cookieHeader) as Promise<string | null>,
+  ]);
+  return { accessToken, refreshToken };
+}
+
+export async function readAccessTokenCookie(request: Request): Promise<string | null> {
+  return (await accessTokenCookie.parse(request.headers.get("Cookie"))) as string | null;
+}
+
+export async function readRefreshTokenCookie(request: Request): Promise<string | null> {
+  return (await refreshTokenCookie.parse(request.headers.get("Cookie"))) as string | null;
 }
 
 export async function requireAuth(request: Request) {
-  const cookieHeader = request.headers.get("Cookie") || "";
-  const cookies = parseCookies(cookieHeader);
-
-  const accessToken = cookies.accessToken;
-  const refreshToken = cookies.refreshToken;
+  const { accessToken, refreshToken } = await readAuthCookies(request);
 
   // Try access token first
   if (accessToken) {
@@ -60,16 +83,16 @@ export async function requireAdmin(request: Request) {
   return { auth, user };
 }
 
-export function setAuthCookies(accessToken: string, refreshToken: string): string[] {
-  return [
-    `accessToken=${accessToken}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${15 * 60}`,
-    `refreshToken=${refreshToken}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${7 * 24 * 60 * 60}`,
-  ];
+export async function setAuthCookies(accessToken: string, refreshToken: string): Promise<string[]> {
+  return Promise.all([
+    accessTokenCookie.serialize(accessToken),
+    refreshTokenCookie.serialize(refreshToken),
+  ]);
 }
 
-export function clearAuthCookies(): string[] {
-  return [
-    "accessToken=; HttpOnly; Path=/; Max-Age=0",
-    "refreshToken=; HttpOnly; Path=/; Max-Age=0",
-  ];
+export async function clearAuthCookies(): Promise<string[]> {
+  return Promise.all([
+    accessTokenCookie.serialize("", { maxAge: 0 }),
+    refreshTokenCookie.serialize("", { maxAge: 0 }),
+  ]);
 }

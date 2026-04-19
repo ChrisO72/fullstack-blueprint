@@ -26,7 +26,7 @@ export async function loader({ request }: Route.LoaderArgs) {
   await confirmUserEmail(user.id, token);
 
   const { accessToken, refreshToken } = await createTokens(user.id, user.email);
-  const cookies = setAuthCookies(accessToken, refreshToken);
+  const cookies = await setAuthCookies(accessToken, refreshToken);
 
   return redirect("/", {
     headers: cookies.map((cookie) => ["Set-Cookie", cookie] as [string, string]),

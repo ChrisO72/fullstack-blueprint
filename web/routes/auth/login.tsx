@@ -8,7 +8,7 @@ import { Input } from "../../components/ui-kit/input";
 import { Strong, Text, TextLink } from "../../components/ui-kit/text";
 import { getSiteSettings } from "../../../db/repositories/settings";
 import { createTokens, validateLogin } from "../../lib/auth.server";
-import { setAuthCookies } from "../../lib/session.server";
+import { readAccessTokenCookie, setAuthCookies } from "../../lib/session.server";
 import type { Route } from "./+types/login";
 
 const loginSchema = z.object({
@@ -22,8 +22,8 @@ type ActionData = {
 };
 
 export async function loader({ request }: Route.LoaderArgs) {
-  const cookieHeader = request.headers.get("Cookie") || "";
-  if (cookieHeader.includes("accessToken=")) {
+  const accessToken = await readAccessTokenCookie(request);
+  if (accessToken) {
     return redirect("/");
   }
   return null;
@@ -56,7 +56,7 @@ export async function action({ request }: Route.ActionArgs): Promise<ActionData 
   }
 
   const { accessToken, refreshToken } = await createTokens(user.id, user.email);
-  const cookies = setAuthCookies(accessToken, refreshToken);
+  const cookies = await setAuthCookies(accessToken, refreshToken);
 
   return redirect("/", {
     headers: cookies.map((cookie) => ["Set-Cookie", cookie] as [string, string]),
