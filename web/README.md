@@ -27,7 +27,6 @@ import type { Route } from "./+types/index";
 import { redirect } from "react-router";
 import { z } from "zod";
 import { requireAuth } from "~/lib/session.server";
-import { getUserById } from "~/db/repositories/users";
 import { createItem } from "~/db/repositories/items";
 
 const createItemSchema = z.object({
@@ -40,16 +39,12 @@ export type ActionData =
   | undefined;
 
 export async function loader({ request }: Route.LoaderArgs) {
-  const auth = await requireAuth(request);
-  const user = await getUserById(auth.userId);
-  if (!user) throw new Response("Unauthorized", { status: 401 });
+  const { user } = await requireAuth(request);
   return { user };
 }
 
 export async function action({ request }: Route.ActionArgs) {
-  const auth = await requireAuth(request);
-  const user = await getUserById(auth.userId);
-  if (!user) throw new Response("Unauthorized", { status: 401 });
+  const { user } = await requireAuth(request);
 
   const formData = await request.formData();
   const result = createItemSchema.safeParse(Object.fromEntries(formData));
@@ -65,6 +60,8 @@ export default function Page({ loaderData }: Route.ComponentProps) {
   return <div>{loaderData.user.email}</div>;
 }
 ```
+
+`requireAuth` returns `{ user, newAccessToken, newRefreshToken }`. The token fields are non-null only when the access token expired and was rotated via the refresh token; the root layout loader sets the new cookies on the response (see [routes/layout.tsx](routes/layout.tsx)). If the session is invalid or the user record was deleted, `requireAuth` throws a redirect to `/login` (clearing cookies in the deleted-user case), so loaders/actions never need to handle the missing-user branch themselves. Use `requireAdmin` for admin-only routes — it returns the same shape and additionally redirects non-admins to `/`.
 
 ## Server boundary
 

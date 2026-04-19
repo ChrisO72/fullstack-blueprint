@@ -6,7 +6,6 @@ import {
   softDeleteItem,
 } from "~/db/repositories/items";
 import { requireAuth } from "~/lib/session.server";
-import { getUserById } from "~/db/repositories/users";
 import { Heading } from "../../components/ui-kit/heading";
 import {
   Table,
@@ -45,9 +44,7 @@ const DEFAULT_PAGE_SIZE = 10;
 const PAGE_SIZE_OPTIONS = [5, 10, 25, 50];
 
 export async function loader({ request }: Route.LoaderArgs) {
-  const auth = await requireAuth(request);
-  const user = await getUserById(auth.userId);
-  if (!user) throw new Response("Unauthorized", { status: 401 });
+  const { user } = await requireAuth(request);
 
   const url = new URL(request.url);
   const pageParam = url.searchParams.get("page");
@@ -78,9 +75,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 }
 
 export async function action({ request }: Route.ActionArgs) {
-  const auth = await requireAuth(request);
-  const user = await getUserById(auth.userId);
-  if (!user) throw new Response("Unauthorized", { status: 401 });
+  const { user } = await requireAuth(request);
 
   const url = new URL(request.url);
   const redirectUrl = url.search ? `.${url.search}` : ".";

@@ -45,42 +45,47 @@ export async function readRefreshTokenCookie(request: Request): Promise<string |
 export async function requireAuth(request: Request) {
   const { accessToken, refreshToken } = await readAuthCookies(request);
 
-  // Try access token first
+  let userId: number | null = null;
+  let newAccessToken: string | null = null;
+  let newRefreshToken: string | null = null;
+
   if (accessToken) {
     const payload = verifyAccessToken(accessToken);
-    if (payload) {
-      return {
-        userId: payload.userId,
-        email: payload.email,
-        newAccessToken: null,
-        newRefreshToken: null,
-      };
-    }
+    if (payload) userId = payload.userId;
   }
 
-  // Try refresh token
-  if (refreshToken) {
+  if (userId === null && refreshToken) {
     const result = await refreshAccessToken(refreshToken);
     if (result) {
-      return {
-        userId: result.user.id,
-        email: result.user.email,
-        newAccessToken: result.accessToken,
-        newRefreshToken: result.refreshToken,
-      };
+      userId = result.user.id;
+      newAccessToken = result.accessToken;
+      newRefreshToken = result.refreshToken;
     }
   }
 
-  throw redirect("/login");
+  if (userId === null) {
+    throw redirect("/login");
+  }
+
+  const user = await getUserById(userId);
+  if (!user) {
+    // Session was valid but the user record is gone (deleted while logged in).
+    // Treat it as a logout: clear cookies and bounce to login.
+    const cookies = await clearAuthCookies();
+    throw redirect("/login", {
+      headers: cookies.map((cookie) => ["Set-Cookie", cookie] as [string, string]),
+    });
+  }
+
+  return { user, newAccessToken, newRefreshToken };
 }
 
 export async function requireAdmin(request: Request) {
   const auth = await requireAuth(request);
-  const user = await getUserById(auth.userId);
-  if (!user || user.role !== "admin") {
+  if (auth.user.role !== "admin") {
     throw redirect("/");
   }
-  return { auth, user };
+  return auth;
 }
 
 export async function setAuthCookies(accessToken: string, refreshToken: string): Promise<string[]> {

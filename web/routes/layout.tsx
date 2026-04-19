@@ -1,4 +1,4 @@
-import { Outlet, redirect, useLocation, useLoaderData } from "react-router";
+import { Outlet, useLocation, useLoaderData } from "react-router";
 import { SidebarLayout } from "../components/ui-kit/sidebar-layout";
 import {
   Sidebar,
@@ -12,20 +12,13 @@ import {
 import { Navbar } from "../components/ui-kit/navbar";
 import { ThemeToggle } from "../components/theme-toggle";
 import { requireAuth, setAuthCookies } from "../lib/session.server";
-import { getUserById } from "../../db/repositories/users";
 import type { Route } from "./+types/layout";
 
 export async function loader({ request }: Route.LoaderArgs) {
-  const auth = await requireAuth(request);
+  const { user, newAccessToken, newRefreshToken } = await requireAuth(request);
 
-  const user = await getUserById(auth.userId);
-  if (!user) {
-    throw redirect("/login");
-  }
-
-  // If we got new tokens from refresh, set both cookies
-  if (auth.newAccessToken && auth.newRefreshToken) {
-    const cookies = await setAuthCookies(auth.newAccessToken, auth.newRefreshToken);
+  if (newAccessToken && newRefreshToken) {
+    const cookies = await setAuthCookies(newAccessToken, newRefreshToken);
     const headers = new Headers();
     cookies.forEach((cookie) => headers.append("Set-Cookie", cookie));
     return Response.json({ user }, { headers });
