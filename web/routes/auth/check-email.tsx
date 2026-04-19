@@ -4,16 +4,14 @@ import { AuthLayout } from "../../components/ui-kit/auth-layout";
 import { Button } from "../../components/ui-kit/button";
 import { Heading } from "../../components/ui-kit/heading";
 import { Strong, Text, TextLink } from "../../components/ui-kit/text";
-import {
-  getUserByEmail,
-  createEmailConfirmationToken,
-  getLatestConfirmationTokenCreatedAt,
-} from "../../../db/repositories/auth";
+import { getUserByEmail } from "../../../db/repositories/users";
+import { getLatestEmailConfirmationTokenCreatedAt } from "../../../db/repositories/emailConfirmationTokens";
+import { createEmailConfirmationToken } from "../../lib/auth.server";
 import { sendConfirmationEmail } from "../../lib/mail.server";
 import type { Route } from "./+types/check-email";
 
 // const RESEND_COOLDOWN_MS = 5 * 60 * 1000;
-const RESEND_COOLDOWN_MS = 5
+const RESEND_COOLDOWN_MS = 5;
 
 export async function loader({ request }: Route.LoaderArgs) {
   const cookieHeader = request.headers.get("Cookie") || "";
@@ -32,7 +30,7 @@ export async function loader({ request }: Route.LoaderArgs) {
     return { email: null, lastSentAt: null };
   }
 
-  const lastSentAt = await getLatestConfirmationTokenCreatedAt(user.id);
+  const lastSentAt = await getLatestEmailConfirmationTokenCreatedAt(user.id);
   return { email, lastSentAt: lastSentAt?.toISOString() ?? null };
 }
 
@@ -46,7 +44,7 @@ export async function action({ request }: Route.ActionArgs) {
     return { error: "No pending confirmation for this email." };
   }
 
-  const lastSentAt = await getLatestConfirmationTokenCreatedAt(user.id);
+  const lastSentAt = await getLatestEmailConfirmationTokenCreatedAt(user.id);
   if (lastSentAt && Date.now() - lastSentAt.getTime() < RESEND_COOLDOWN_MS) {
     return { error: "Please wait before requesting another email." };
   }
@@ -108,8 +106,8 @@ export default function CheckEmailPage({ loaderData }: Route.ComponentProps) {
       <div className="grid w-full max-w-sm grid-cols-1 gap-6 text-center">
         <Heading>Check your email</Heading>
         <Text>
-          We sent you a confirmation link. Please check your inbox and click the
-          link to verify your email address.
+          We sent you a confirmation link. Please check your inbox and click the link to verify your
+          email address.
         </Text>
 
         {fetcher.data && "error" in fetcher.data && (
@@ -127,12 +125,7 @@ export default function CheckEmailPage({ loaderData }: Route.ComponentProps) {
         {email && (
           <fetcher.Form method="POST">
             <input type="hidden" name="email" value={email} />
-            <Button
-              type="submit"
-              outline
-              className="w-full"
-              disabled={!canResend}
-            >
+            <Button type="submit" outline className="w-full" disabled={!canResend}>
               {isSending
                 ? "Sending..."
                 : remaining > 0

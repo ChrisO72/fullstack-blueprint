@@ -32,9 +32,5 @@ export async function sendConfirmationEmail(to: string, token: string) {
     throw error;
   }
 
-
-
-
-
   console.log(`[mail] sent to ${to} — id: ${response.message_id}, status: ${response.status}`);
 }

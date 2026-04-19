@@ -1,6 +1,6 @@
 import { redirect } from "react-router";
 import { clearAuthCookies, parseCookies } from "../../lib/session.server";
-import { deleteRefreshToken } from "../../../db/repositories/auth";
+import { deleteRefreshToken } from "../../../db/repositories/refreshTokens";
 import type { Route } from "./+types/logout";
 
 export async function loader({ request }: Route.LoaderArgs) {

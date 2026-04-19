@@ -12,7 +12,6 @@ import { Switch, SwitchField } from "../../components/ui-kit/switch";
 import { Badge } from "../../components/ui-kit/badge";
 import { XMarkIcon } from "@heroicons/react/16/solid";
 
-
 const settingsSchema = z.object({
   allowedDomains: z.array(z.string().trim().min(1)).default([]),
   requireMailConfirmation: z.boolean().default(false),
@@ -104,7 +103,7 @@ export default function AdminSettingsPage({ loaderData }: Route.ComponentProps) 
                       <button
                         type="button"
                         onClick={() => removeDomain(domain)}
-                        className="ml-1 -mr-0.5 inline-flex items-center"
+                        className="-mr-0.5 ml-1 inline-flex items-center"
                       >
                         <XMarkIcon className="size-3.5" />
                       </button>
@@ -126,7 +125,11 @@ export default function AdminSettingsPage({ loaderData }: Route.ComponentProps) 
                 onChange={setMailConfirmation}
                 color="dark/zinc"
               />
-              <input type="hidden" name="requireMailConfirmation" value={String(mailConfirmation)} />
+              <input
+                type="hidden"
+                name="requireMailConfirmation"
+                value={String(mailConfirmation)}
+              />
             </SwitchField>
           </FieldGroup>
         </Fieldset>

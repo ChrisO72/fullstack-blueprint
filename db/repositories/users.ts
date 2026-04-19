@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, count, eq, isNull } from "drizzle-orm";
 import { db } from "../db";
 import { type InsertUser, users } from "../schema";
 
@@ -11,6 +11,15 @@ export async function getUserById(id: number) {
     .select()
     .from(users)
     .where(and(eq(users.id, id), isNull(users.deletedAt)))
+    .limit(1);
+  return user ?? null;
+}
+
+export async function getUserByEmail(email: string) {
+  const [user] = await db
+    .select()
+    .from(users)
+    .where(and(eq(users.email, email.toLowerCase()), isNull(users.deletedAt)))
     .limit(1);
   return user ?? null;
 }
@@ -44,4 +53,9 @@ export async function getUsersByOrganizationId(organizationId: number) {
     .select()
     .from(users)
     .where(and(eq(users.organizationId, organizationId), isNull(users.deletedAt)));
+}
+
+export async function countUsers(): Promise<number> {
+  const [{ value }] = await db.select({ value: count() }).from(users);
+  return value;
 }

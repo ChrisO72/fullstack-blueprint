@@ -3,10 +3,10 @@ import { AuthLayout } from "../../components/ui-kit/auth-layout";
 import { Heading } from "../../components/ui-kit/heading";
 import { Strong, Text, TextLink } from "../../components/ui-kit/text";
 import {
-  verifyEmailConfirmationToken,
   confirmUserEmail,
   createTokens,
-} from "../../../db/repositories/auth";
+  verifyEmailConfirmationToken,
+} from "../../lib/auth.server";
 import { setAuthCookies } from "../../lib/session.server";
 import type { Route } from "./+types/confirm-email";
 

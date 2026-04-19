@@ -19,4 +19,3 @@ export async function processJob(job: Job<JobData[JobName], void, JobName>) {
 async function handleExample(data: JobData["example"]) {
   console.log(`[Worker] Example job: ${data.message}`);
 }
-

@@ -21,7 +21,6 @@ import { EllipsisHorizontalIcon } from "@heroicons/react/16/solid";
 import { z } from "zod";
 import { Select } from "../../components/ui-kit/select";
 
-
 const ROLES = ["admin", "user", "viewer"] as const;
 
 const deleteUserSchema = z.object({
@@ -144,9 +143,7 @@ function RoleSelect({
   disabled?: boolean;
 }) {
   const fetcher = useFetcher();
-  const optimisticRole = fetcher.formData
-    ? (fetcher.formData.get("role") as string)
-    : currentRole;
+  const optimisticRole = fetcher.formData ? (fetcher.formData.get("role") as string) : currentRole;
 
   return (
     <Select
@@ -154,10 +151,7 @@ function RoleSelect({
       value={optimisticRole}
       disabled={disabled}
       onChange={(e) => {
-        fetcher.submit(
-          { id: userId.toString(), role: e.target.value },
-          { method: "PATCH" },
-        );
+        fetcher.submit({ id: userId.toString(), role: e.target.value }, { method: "PATCH" });
       }}
     >
       {ROLES.map((role) => (

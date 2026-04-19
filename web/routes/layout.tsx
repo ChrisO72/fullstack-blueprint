@@ -34,38 +34,10 @@ export async function loader({ request }: Route.LoaderArgs) {
   return { user };
 }
 
-function generateBreadcrumbs(
-  pathname: string,
-): Array<{ name: string; href: string; current: boolean }> {
-  const pages: Array<{ name: string; href: string; current: boolean }> = [];
-
-  // Remove leading/trailing slashes and split
-  const segments = pathname.split("/").filter(Boolean);
-
-  let currentPath = "";
-
-  for (let i = 0; i < segments.length; i++) {
-    const segment = segments[i];
-    currentPath += `/${segment}`;
-
-    // Map segment to display name: replace - with space, capitalize first letter
-    let name = segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, " ");
-
-    pages.push({
-      name,
-      href: currentPath,
-      current: i === segments.length - 1,
-    });
-  }
-
-  return pages;
-}
-
 export default function Layout() {
   const location = useLocation();
   const { user } = useLoaderData<typeof loader>();
   const pathname = location.pathname || "/";
-  const breadcrumbPages = pathname === "/" ? [] : generateBreadcrumbs(pathname);
 
   return (
     <SidebarLayout

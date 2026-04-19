@@ -6,8 +6,8 @@ import { ErrorMessage, Field, Label } from "../../components/ui-kit/fieldset";
 import { Heading } from "../../components/ui-kit/heading";
 import { Input } from "../../components/ui-kit/input";
 import { Strong, Text, TextLink } from "../../components/ui-kit/text";
-import { validateLogin, createTokens } from "../../../db/repositories/auth";
 import { getSiteSettings } from "../../../db/repositories/settings";
+import { createTokens, validateLogin } from "../../lib/auth.server";
 import { setAuthCookies } from "../../lib/session.server";
 import type { Route } from "./+types/login";
 
@@ -97,7 +97,7 @@ export default function LoginPage() {
           {isSubmitting ? "Logging in..." : "Login"}
         </Button>
         <Text>
-          Don't have an account?{" "}
+          Don&apos;t have an account?{" "}
           <TextLink href="/signup">
             <Strong>Sign up</Strong>
           </TextLink>

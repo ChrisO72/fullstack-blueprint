@@ -9,4 +9,3 @@ export function startScheduler() {
 
   console.log("[Scheduler] Cron jobs registered");
 }
-

@@ -6,13 +6,13 @@ import { ErrorMessage, Field, Label } from "../../components/ui-kit/fieldset";
 import { Heading } from "../../components/ui-kit/heading";
 import { Input } from "../../components/ui-kit/input";
 import { Strong, Text, TextLink } from "../../components/ui-kit/text";
-import {
-  getUserByEmail,
-  createUserWithPassword,
-  createTokens,
-  createEmailConfirmationToken,
-} from "../../../db/repositories/auth";
 import { getSiteSettings } from "../../../db/repositories/settings";
+import { getUserByEmail } from "../../../db/repositories/users";
+import {
+  createEmailConfirmationToken,
+  createTokens,
+  createUserWithPassword,
+} from "../../lib/auth.server";
 import { setAuthCookies } from "../../lib/session.server";
 import { sendConfirmationEmail } from "../../lib/mail.server";
 import type { Route } from "./+types/signup";
@@ -77,7 +77,9 @@ export async function action({ request }: Route.ActionArgs): Promise<ActionData 
     try {
       await sendConfirmationEmail(email, token);
     } catch {
-      return { formError: "Something went wrong sending the confirmation email. Please try again later." };
+      return {
+        formError: "Something went wrong sending the confirmation email. Please try again later.",
+      };
     }
     return redirect(`/check-email?email=${encodeURIComponent(email)}`);
   }

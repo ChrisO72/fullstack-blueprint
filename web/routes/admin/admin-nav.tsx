@@ -14,9 +14,7 @@ export function AdminNav() {
       <NavbarSection>
         {tabs.map((tab) => {
           const current =
-            tab.href === "/admin"
-              ? pathname === "/admin"
-              : pathname.startsWith(tab.href);
+            tab.href === "/admin" ? pathname === "/admin" : pathname.startsWith(tab.href);
           return (
             <NavbarItem key={tab.href} href={tab.href} current={current}>
               {tab.name}

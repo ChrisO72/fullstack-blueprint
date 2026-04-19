@@ -113,7 +113,7 @@ export async function action({ request }: Route.ActionArgs) {
   return redirect(redirectUrl);
 }
 
-export default function ManageItemsPage({ loaderData, actionData }: Route.ComponentProps) {
+export default function ManageItemsPage({ loaderData }: Route.ComponentProps) {
   const { items, page, totalPages, totalCount, pageSize, pageSizeOptions } = loaderData;
 
   return (

@@ -1,6 +1,5 @@
 import { redirect } from "react-router";
-import { verifyAccessToken } from "./auth.server";
-import { refreshAccessToken } from "../../db/repositories/auth";
+import { refreshAccessToken, verifyAccessToken } from "./auth.server";
 import { getUserById } from "../../db/repositories/users";
 
 export function parseCookies(cookieHeader: string): Record<string, string> {
