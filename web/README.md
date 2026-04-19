@@ -34,9 +34,7 @@ const createItemSchema = z.object({
   description: z.string().max(1000).optional(),
 });
 
-export type ActionData =
-  | { success: false; errors: Record<string, string[] | undefined> }
-  | undefined;
+export type ActionData = { errors: FieldErrors } | undefined;
 
 export async function loader({ request }: Route.LoaderArgs) {
   const { user } = await requireAuth(request);
@@ -47,12 +45,10 @@ export async function action({ request }: Route.ActionArgs) {
   const { user } = await requireAuth(request);
 
   const formData = await request.formData();
-  const result = createItemSchema.safeParse(Object.fromEntries(formData));
-  if (!result.success) {
-    return { success: false, errors: z.flattenError(result.error).fieldErrors };
-  }
+  const { data, errors } = parseForm(formData, createItemSchema);
+  if (errors) return { errors };
 
-  await createItem({ organizationId: user.organizationId, ...result.data });
+  await createItem({ organizationId: user.organizationId, ...data });
   return redirect(".");
 }
 
@@ -85,7 +81,7 @@ Multi-org: scope every query by `organizationId` (read it from the authenticated
 
 ## Validation
 
-Zod for every form/action input. Parse at the boundary with `safeParse`, then pass typed objects inward. Return errors in the standard `ActionData` shape shown in the route template above.
+Zod for every form/action input. Parse with `parseForm` from [lib/form.ts](lib/form.ts) (action template above) and render messages with `<FieldError name="..." errors={errors} />` from [components/field-error.tsx](components/field-error.tsx) next to each `<Input>`.
 
 ## UI
 

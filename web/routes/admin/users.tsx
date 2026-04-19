@@ -20,6 +20,7 @@ import {
 import { EllipsisHorizontalIcon } from "@heroicons/react/16/solid";
 import { z } from "zod";
 import { Select } from "../../components/ui-kit/select";
+import { parseForm } from "~/lib/form";
 
 const ROLES = ["admin", "user", "viewer"] as const;
 
@@ -42,29 +43,24 @@ export async function action({ request }: Route.ActionArgs) {
   const { user } = await requireAdmin(request);
 
   const formData = await request.formData();
-  const data = Object.fromEntries(formData);
 
   if (request.method === "DELETE") {
-    const result = deleteUserSchema.safeParse(data);
-    if (!result.success) {
-      return { success: false, errors: z.flattenError(result.error).fieldErrors };
+    const { data, errors } = parseForm(formData, deleteUserSchema);
+    if (errors) return { errors };
+    if (data.id === user.id) {
+      return { errors: { id: ["Cannot delete yourself"] } };
     }
-    if (result.data.id === user.id) {
-      return { success: false, errors: { id: ["Cannot delete yourself"] } };
-    }
-    await softDeleteUser(result.data.id);
+    await softDeleteUser(data.id);
     return redirect(".");
   }
 
   if (request.method === "PATCH") {
-    const result = updateRoleSchema.safeParse(data);
-    if (!result.success) {
-      return { success: false, errors: z.flattenError(result.error).fieldErrors };
+    const { data, errors } = parseForm(formData, updateRoleSchema);
+    if (errors) return { errors };
+    if (data.id === user.id) {
+      return { errors: { id: ["Cannot change your own role"] } };
     }
-    if (result.data.id === user.id) {
-      return { success: false, errors: { id: ["Cannot change your own role"] } };
-    }
-    await updateUser(result.data.id, { role: result.data.role });
+    await updateUser(data.id, { role: data.role });
     return redirect(".");
   }
 

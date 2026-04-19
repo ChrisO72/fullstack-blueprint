@@ -26,6 +26,7 @@ import {
 } from "../../components/ui-kit/dropdown";
 import { EllipsisHorizontalIcon } from "@heroicons/react/16/solid";
 import { z } from "zod";
+import { parseForm, type FieldErrors } from "~/lib/form";
 
 const createItemSchema = z.object({
   title: z.string().min(1, "Title is required").max(255, "Title too long"),
@@ -36,9 +37,7 @@ const deleteItemSchema = z.object({
   id: z.coerce.number({ message: "Invalid item ID" }).positive("Invalid item ID"),
 });
 
-export type ActionData =
-  | { success: false; errors: Record<string, string[] | undefined> }
-  | undefined;
+export type ActionData = { errors: FieldErrors } | undefined;
 
 const DEFAULT_PAGE_SIZE = 10;
 const PAGE_SIZE_OPTIONS = [5, 10, 25, 50];
@@ -81,28 +80,21 @@ export async function action({ request }: Route.ActionArgs) {
   const redirectUrl = url.search ? `.${url.search}` : ".";
 
   const formData = await request.formData();
-  const data = Object.fromEntries(formData);
 
-  // Handle DELETE
   if (request.method === "DELETE") {
-    const result = deleteItemSchema.safeParse(data);
-    if (!result.success) {
-      return { success: false, errors: z.flattenError(result.error).fieldErrors };
-    }
-    await softDeleteItem(result.data.id, user.organizationId);
+    const { data, errors } = parseForm(formData, deleteItemSchema);
+    if (errors) return { errors };
+    await softDeleteItem(data.id, user.organizationId);
     return redirect(redirectUrl);
   }
 
-  // Handle POST (create)
-  const result = createItemSchema.safeParse(data);
-  if (!result.success) {
-    return { success: false, errors: z.flattenError(result.error).fieldErrors };
-  }
+  const { data, errors } = parseForm(formData, createItemSchema);
+  if (errors) return { errors };
 
   await createItem({
     organizationId: user.organizationId,
-    title: result.data.title,
-    description: result.data.description ?? null,
+    title: data.title,
+    description: data.description ?? null,
   });
 
   return redirect(redirectUrl);

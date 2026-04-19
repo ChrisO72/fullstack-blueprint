@@ -8,7 +8,8 @@ import {
   DialogDescription,
   DialogTitle,
 } from "../../components/ui-kit/dialog";
-import { Field, Label, ErrorMessage } from "../../components/ui-kit/fieldset";
+import { Field, Label } from "../../components/ui-kit/fieldset";
+import { FieldError } from "../../components/field-error";
 import { Input } from "../../components/ui-kit/input";
 import { PlusIcon } from "@heroicons/react/24/outline";
 import type { ActionData } from "./index";
@@ -51,9 +52,7 @@ export function CreateItemDialog() {
                 invalid={!!actionData?.errors?.title}
                 autoFocus
               />
-              {actionData?.errors?.title && (
-                <ErrorMessage>{actionData.errors.title[0]}</ErrorMessage>
-              )}
+              <FieldError name="title" errors={actionData?.errors} />
             </Field>
             <Field>
               <Label>Description</Label>
@@ -64,9 +63,7 @@ export function CreateItemDialog() {
                 disabled={isSubmitting}
                 invalid={!!actionData?.errors?.description}
               />
-              {actionData?.errors?.description && (
-                <ErrorMessage>{actionData.errors.description[0]}</ErrorMessage>
-              )}
+              <FieldError name="description" errors={actionData?.errors} />
             </Field>
           </Form>
         </DialogBody>

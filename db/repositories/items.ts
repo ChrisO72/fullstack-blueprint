@@ -38,13 +38,6 @@ export async function listItemsByOrg(organizationId: number) {
     .where(and(eq(items.organizationId, organizationId), isNull(items.deletedAt)));
 }
 
-export async function getItemsByOrganizationId(organizationId: number) {
-  return await db
-    .select()
-    .from(items)
-    .where(and(eq(items.organizationId, organizationId), isNull(items.deletedAt)));
-}
-
 export async function listItemsByOrgPaginated(organizationId: number, page: number, limit: number) {
   const offset = (page - 1) * limit;
   return await db
