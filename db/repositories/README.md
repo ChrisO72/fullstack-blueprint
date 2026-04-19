@@ -20,11 +20,12 @@ export async function createUser(user: InsertUser) {
 
 // Read
 export async function getUserById(id: number) {
-  const result = await db
+  const [user] = await db
     .select()
     .from(users)
-    .where(and(eq(users.id, id), isNull(users.deleted_at)));
-  return result[0] || null;
+    .where(and(eq(users.id, id), isNull(users.deletedAt)))
+    .limit(1);
+  return user ?? null;
 }
 
 // Update
@@ -33,7 +34,6 @@ export async function updateUser(id: number, data: Partial<InsertUser>) {
     .update(users)
     .set({
       ...data,
-      updated_at: new Date(),
     })
     .where(eq(users.id, id))
     .returning();
@@ -44,8 +44,7 @@ export async function softDeleteUser(id: number) {
   return await db
     .update(users)
     .set({
-      deleted_at: new Date(),
-      updated_at: new Date(),
+      deletedAt: new Date(),
     })
     .where(eq(users.id, id))
     .returning();
@@ -53,14 +52,14 @@ export async function softDeleteUser(id: number) {
 
 // List (excluding soft-deleted)
 export async function listUsers() {
-  return await db.select().from(users).where(isNull(users.deleted_at));
+  return await db.select().from(users).where(isNull(users.deletedAt));
 }
 ```
 
 ## Guidelines
 
-- Always check `deleted_at` is null for reads
-- Use soft deletes (set `deleted_at`) instead of hard deletes
-- Update `updated_at` on updates
+- Always check `deletedAt` is null for reads
+- Use soft deletes (set `deletedAt`) instead of hard deletes
+- `updatedAt` is updated automatically by the schema's `$onUpdate` — don't set it manually
 - Add relationship helpers (e.g., `getItemsByUserId`) as needed
 - Keep functions minimal and focused

@@ -11,6 +11,7 @@ import { Button } from "~/components/ui-kit/button";
 import { Switch, SwitchField } from "~/components/ui-kit/switch";
 import { Badge } from "~/components/ui-kit/badge";
 import { XMarkIcon } from "@heroicons/react/16/solid";
+import type { ActionData, FieldErrors } from "~/lib/form";
 
 const settingsSchema = z.object({
   allowedDomains: z.array(z.string().trim().min(1)).default([]),
@@ -23,7 +24,7 @@ export async function loader({ request }: Route.LoaderArgs) {
   return { settings };
 }
 
-export async function action({ request }: Route.ActionArgs) {
+export async function action({ request }: Route.ActionArgs): Promise<ActionData> {
   await requireAdmin(request);
 
   const formData = await request.formData();
@@ -33,11 +34,11 @@ export async function action({ request }: Route.ActionArgs) {
 
   const result = settingsSchema.safeParse({ allowedDomains: domains, requireMailConfirmation });
   if (!result.success) {
-    return { success: false, errors: z.flattenError(result.error).fieldErrors };
+    return { fieldErrors: z.flattenError(result.error).fieldErrors as FieldErrors };
   }
 
   await updateSiteSettings(result.data);
-  return { success: true, errors: null };
+  return {};
 }
 
 export default function AdminSettingsPage({ loaderData }: Route.ComponentProps) {
@@ -61,7 +62,11 @@ export default function AdminSettingsPage({ loaderData }: Route.ComponentProps) 
   };
 
   const isSaving = fetcher.state !== "idle";
-  const saved = fetcher.data?.success === true && fetcher.state === "idle";
+  const saved =
+    fetcher.state === "idle" &&
+    fetcher.data !== undefined &&
+    !fetcher.data.fieldErrors &&
+    !fetcher.data.formError;
 
   return (
     <div>

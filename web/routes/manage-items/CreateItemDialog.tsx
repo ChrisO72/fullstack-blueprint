@@ -12,7 +12,7 @@ import { Field, Label } from "~/components/ui-kit/fieldset";
 import { FieldError } from "~/components/field-error";
 import { Input } from "~/components/ui-kit/input";
 import { PlusIcon } from "@heroicons/react/24/outline";
-import type { ActionData } from "./index";
+import type { ActionData } from "~/lib/form";
 
 export function CreateItemDialog() {
   const [isOpen, setIsOpen] = useState(false);
@@ -23,7 +23,7 @@ export function CreateItemDialog() {
 
   // Reset form and close dialog on successful submission
   useEffect(() => {
-    if (navigation.state === "idle" && !actionData?.errors) {
+    if (navigation.state === "idle" && !actionData?.fieldErrors) {
       formRef.current?.reset();
       setIsOpen(false);
     }
@@ -49,10 +49,10 @@ export function CreateItemDialog() {
                 placeholder="Enter item title"
                 required
                 disabled={isSubmitting}
-                invalid={!!actionData?.errors?.title}
+                invalid={!!actionData?.fieldErrors?.title}
                 autoFocus
               />
-              <FieldError name="title" errors={actionData?.errors} />
+              <FieldError name="title" actionData={actionData} />
             </Field>
             <Field>
               <Label>Description</Label>
@@ -61,9 +61,9 @@ export function CreateItemDialog() {
                 name="description"
                 placeholder="Enter item description (optional)"
                 disabled={isSubmitting}
-                invalid={!!actionData?.errors?.description}
+                invalid={!!actionData?.fieldErrors?.description}
               />
-              <FieldError name="description" errors={actionData?.errors} />
+              <FieldError name="description" actionData={actionData} />
             </Field>
           </Form>
         </DialogBody>

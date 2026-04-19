@@ -4,7 +4,7 @@ import { hashRefreshToken } from "~/lib/auth.server";
 import { deleteRefreshTokenByHash } from "~/db/repositories/refreshTokens";
 import type { Route } from "./+types/logout";
 
-export async function loader({ request }: Route.LoaderArgs) {
+export async function action({ request }: Route.ActionArgs) {
   const refreshToken = await readRefreshTokenCookie(request);
   if (refreshToken) {
     await deleteRefreshTokenByHash(hashRefreshToken(refreshToken));
@@ -14,6 +14,10 @@ export async function loader({ request }: Route.LoaderArgs) {
   return redirect("/login", {
     headers: clearCookies.map((cookie) => ["Set-Cookie", cookie] as [string, string]),
   });
+}
+
+export async function loader() {
+  return redirect("/login");
 }
 
 export default function Logout() {

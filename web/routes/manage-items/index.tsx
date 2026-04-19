@@ -21,7 +21,7 @@ import { redirect, useSubmit } from "react-router";
 import { Dropdown, DropdownButton, DropdownItem, DropdownMenu } from "~/components/ui-kit/dropdown";
 import { EllipsisHorizontalIcon } from "@heroicons/react/16/solid";
 import { z } from "zod";
-import { parseForm, type FieldErrors } from "~/lib/form";
+import { parseForm } from "~/lib/form";
 
 const createItemSchema = z.object({
   title: z.string().min(1, "Title is required").max(255, "Title too long"),
@@ -31,8 +31,6 @@ const createItemSchema = z.object({
 const deleteItemSchema = z.object({
   id: z.coerce.number({ message: "Invalid item ID" }).positive("Invalid item ID"),
 });
-
-export type ActionData = { errors: FieldErrors } | undefined;
 
 const DEFAULT_PAGE_SIZE = 10;
 const PAGE_SIZE_OPTIONS = [5, 10, 25, 50];
@@ -77,14 +75,14 @@ export async function action({ request }: Route.ActionArgs) {
   const formData = await request.formData();
 
   if (request.method === "DELETE") {
-    const { data, errors } = parseForm(formData, deleteItemSchema);
-    if (errors) return { errors };
+    const { data, fieldErrors } = parseForm(formData, deleteItemSchema);
+    if (fieldErrors) return { fieldErrors };
     await softDeleteItem(data.id, user.organizationId);
     return redirect(redirectUrl);
   }
 
-  const { data, errors } = parseForm(formData, createItemSchema);
-  if (errors) return { errors };
+  const { data, fieldErrors } = parseForm(formData, createItemSchema);
+  if (fieldErrors) return { fieldErrors };
 
   await createItem({
     organizationId: user.organizationId,

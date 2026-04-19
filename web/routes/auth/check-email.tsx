@@ -2,17 +2,20 @@ import { useState, useEffect } from "react";
 import { redirect, useFetcher } from "react-router";
 import { AuthLayout } from "~/components/ui-kit/auth-layout";
 import { Button } from "~/components/ui-kit/button";
+import { FormError } from "~/components/form-error";
 import { Heading } from "~/components/ui-kit/heading";
 import { Strong, Text, TextLink } from "~/components/ui-kit/text";
 import { getUserByEmail } from "~/db/repositories/users";
 import { getLatestEmailConfirmationTokenCreatedAt } from "~/db/repositories/emailConfirmationTokens";
 import { createEmailConfirmationToken, verifyAccessToken } from "~/lib/auth.server";
+import type { ActionData } from "~/lib/form";
 import { sendConfirmationEmail } from "~/lib/mail.server";
 import { readAccessTokenCookie } from "~/lib/session.server";
 import type { Route } from "./+types/check-email";
 
-// const RESEND_COOLDOWN_MS = 5 * 60 * 1000;
-const RESEND_COOLDOWN_MS = 5;
+type ResendActionData = ActionData & { resentAt?: string };
+
+const RESEND_COOLDOWN_MS = 5 * 60 * 1000;
 
 export async function loader({ request }: Route.LoaderArgs) {
   const accessToken = await readAccessTokenCookie(request);
@@ -35,29 +38,29 @@ export async function loader({ request }: Route.LoaderArgs) {
   return { email, lastSentAt: lastSentAt?.toISOString() ?? null };
 }
 
-export async function action({ request }: Route.ActionArgs) {
+export async function action({ request }: Route.ActionArgs): Promise<ResendActionData> {
   const formData = await request.formData();
   const email = String(formData.get("email") || "");
-  if (!email) return { error: "Missing email." };
+  if (!email) return { formError: "Missing email." };
 
   const user = await getUserByEmail(email);
   if (!user || user.emailConfirmedAt) {
-    return { error: "No pending confirmation for this email." };
+    return { formError: "No pending confirmation for this email." };
   }
 
   const lastSentAt = await getLatestEmailConfirmationTokenCreatedAt(user.id);
   if (lastSentAt && Date.now() - lastSentAt.getTime() < RESEND_COOLDOWN_MS) {
-    return { error: "Please wait before requesting another email." };
+    return { formError: "Please wait before requesting another email." };
   }
 
   const token = await createEmailConfirmationToken(user.id);
   try {
     await sendConfirmationEmail(email, token);
   } catch {
-    return { error: "Failed to send email. Please try again later." };
+    return { formError: "Failed to send email. Please try again later." };
   }
 
-  return { success: true, resentAt: new Date().toISOString() };
+  return { resentAt: new Date().toISOString() };
 }
 
 function useCountdown(targetMs: number | null) {
@@ -88,8 +91,9 @@ export default function CheckEmailPage({ loaderData }: Route.ComponentProps) {
     lastSentAt: string | null;
   };
   const fetcher = useFetcher<typeof action>();
+  const actionData = fetcher.data;
 
-  const resentAt = fetcher.data && "resentAt" in fetcher.data ? fetcher.data.resentAt : null;
+  const resentAt = actionData?.resentAt ?? null;
   const effectiveLastSent = resentAt ?? lastSentAt;
   const cooldownEnd = effectiveLastSent
     ? new Date(effectiveLastSent).getTime() + RESEND_COOLDOWN_MS
@@ -111,13 +115,9 @@ export default function CheckEmailPage({ loaderData }: Route.ComponentProps) {
           email address.
         </Text>
 
-        {fetcher.data && "error" in fetcher.data && (
-          <div className="rounded-md bg-red-50 p-4 text-sm text-red-700 dark:bg-red-900/20 dark:text-red-400">
-            {fetcher.data.error}
-          </div>
-        )}
+        <FormError actionData={actionData} />
 
-        {fetcher.data && "success" in fetcher.data && (
+        {resentAt && (
           <div className="rounded-md bg-green-50 p-4 text-sm text-green-700 dark:bg-green-900/20 dark:text-green-400">
             Confirmation email resent.
           </div>

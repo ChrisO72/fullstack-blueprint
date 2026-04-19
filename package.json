@@ -20,8 +20,8 @@
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "docker:wipe": "docker compose down -v",
-    "format": "npx prettier . --check",
-    "format:write": "npx prettier . --write"
+    "format": "npx prettier . --write",
+    "format:check": "npx prettier . --check"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.9",

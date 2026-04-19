@@ -3,6 +3,7 @@ import { z } from "zod";
 import { AuthLayout } from "~/components/ui-kit/auth-layout";
 import { Button } from "~/components/ui-kit/button";
 import { FieldError } from "~/components/field-error";
+import { FormError } from "~/components/form-error";
 import { Field, Label } from "~/components/ui-kit/fieldset";
 import { Heading } from "~/components/ui-kit/heading";
 import { Input } from "~/components/ui-kit/input";
@@ -15,7 +16,7 @@ import {
   createUserWithPassword,
   verifyAccessToken,
 } from "~/lib/auth.server";
-import { parseForm, type FieldErrors } from "~/lib/form";
+import { parseForm, type ActionData } from "~/lib/form";
 import { readAccessTokenCookie, setAuthCookies } from "~/lib/session.server";
 import { sendConfirmationEmail } from "~/lib/mail.server";
 import type { Route } from "./+types/signup";
@@ -25,11 +26,6 @@ const signupSchema = z.object({
   firstname: z.string().optional(),
   password: z.string().min(8, "Password must be at least 8 characters"),
 });
-
-type ActionData = {
-  errors?: FieldErrors;
-  formError?: string;
-};
 
 export async function loader({ request }: Route.LoaderArgs) {
   const accessToken = await readAccessTokenCookie(request);
@@ -41,8 +37,8 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 export async function action({ request }: Route.ActionArgs): Promise<ActionData | Response> {
   const formData = await request.formData();
-  const { data, errors } = parseForm(formData, signupSchema);
-  if (errors) return { errors };
+  const { data, fieldErrors } = parseForm(formData, signupSchema);
+  if (fieldErrors) return { fieldErrors };
 
   const { email, firstname, password } = data;
 
@@ -61,7 +57,7 @@ export async function action({ request }: Route.ActionArgs): Promise<ActionData 
     if (settings.requireMailConfirmation && !existing.emailConfirmedAt) {
       return redirect(`/check-email?email=${encodeURIComponent(email)}`);
     }
-    return { errors: { email: ["An account with this email already exists"] } };
+    return { fieldErrors: { email: ["An account with this email already exists"] } };
   }
 
   const user = await createUserWithPassword(email, password, firstname);
@@ -90,28 +86,23 @@ export default function SignupPage() {
   const actionData = useActionData<ActionData>();
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";
-  const errors = actionData?.errors;
 
   return (
     <AuthLayout>
       <Form method="POST" className="grid w-full max-w-sm grid-cols-1 gap-8">
         <Heading>Create your account</Heading>
 
-        {actionData?.formError && (
-          <div className="rounded-md bg-red-50 p-4 text-sm text-red-700 dark:bg-red-900/20 dark:text-red-400">
-            {actionData.formError}
-          </div>
-        )}
+        <FormError actionData={actionData} />
 
         <Field>
           <Label>Email</Label>
-          <Input type="email" name="email" invalid={!!errors?.email} />
-          <FieldError name="email" errors={errors} />
+          <Input type="email" name="email" invalid={!!actionData?.fieldErrors?.email} />
+          <FieldError name="email" actionData={actionData} />
         </Field>
         <Field>
           <Label>First name</Label>
-          <Input name="firstname" invalid={!!errors?.firstname} />
-          <FieldError name="firstname" errors={errors} />
+          <Input name="firstname" invalid={!!actionData?.fieldErrors?.firstname} />
+          <FieldError name="firstname" actionData={actionData} />
         </Field>
         <Field>
           <Label>Password</Label>
@@ -119,9 +110,9 @@ export default function SignupPage() {
             type="password"
             name="password"
             autoComplete="new-password"
-            invalid={!!errors?.password}
+            invalid={!!actionData?.fieldErrors?.password}
           />
-          <FieldError name="password" errors={errors} />
+          <FieldError name="password" actionData={actionData} />
         </Field>
 
         <Button type="submit" className="w-full" disabled={isSubmitting}>

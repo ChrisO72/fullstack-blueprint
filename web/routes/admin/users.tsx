@@ -40,20 +40,20 @@ export async function action({ request }: Route.ActionArgs) {
   const formData = await request.formData();
 
   if (request.method === "DELETE") {
-    const { data, errors } = parseForm(formData, deleteUserSchema);
-    if (errors) return { errors };
+    const { data, fieldErrors } = parseForm(formData, deleteUserSchema);
+    if (fieldErrors) return { fieldErrors };
     if (data.id === user.id) {
-      return { errors: { id: ["Cannot delete yourself"] } };
+      return { fieldErrors: { id: ["Cannot delete yourself"] } };
     }
     await softDeleteUser(data.id);
     return redirect(".");
   }
 
   if (request.method === "PATCH") {
-    const { data, errors } = parseForm(formData, updateRoleSchema);
-    if (errors) return { errors };
+    const { data, fieldErrors } = parseForm(formData, updateRoleSchema);
+    if (fieldErrors) return { fieldErrors };
     if (data.id === user.id) {
-      return { errors: { id: ["Cannot change your own role"] } };
+      return { fieldErrors: { id: ["Cannot change your own role"] } };
     }
     await updateUser(data.id, { role: data.role });
     return redirect(".");

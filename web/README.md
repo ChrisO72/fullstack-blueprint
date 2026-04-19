@@ -24,9 +24,14 @@ Each route module exports a `loader`, an `action`, and a default component. Type
 
 ```ts
 import type { Route } from "./+types/index";
-import { redirect } from "react-router";
+import { Form, redirect, useActionData } from "react-router";
 import { z } from "zod";
+import { FieldError } from "~/components/field-error";
+import { FormError } from "~/components/form-error";
+import { Field, Label } from "~/components/ui-kit/fieldset";
+import { Input } from "~/components/ui-kit/input";
 import { requireAuth } from "~/lib/session.server";
+import { parseForm, type ActionData } from "~/lib/form";
 import { createItem } from "~/db/repositories/items";
 
 const createItemSchema = z.object({
@@ -34,26 +39,34 @@ const createItemSchema = z.object({
   description: z.string().max(1000).optional(),
 });
 
-export type ActionData = { errors: FieldErrors } | undefined;
-
 export async function loader({ request }: Route.LoaderArgs) {
   const { user } = await requireAuth(request);
   return { user };
 }
 
-export async function action({ request }: Route.ActionArgs) {
+export async function action({ request }: Route.ActionArgs): Promise<ActionData | Response> {
   const { user } = await requireAuth(request);
 
   const formData = await request.formData();
-  const { data, errors } = parseForm(formData, createItemSchema);
-  if (errors) return { errors };
+  const { data, fieldErrors } = parseForm(formData, createItemSchema);
+  if (fieldErrors) return { fieldErrors };
 
   await createItem({ organizationId: user.organizationId, ...data });
   return redirect(".");
 }
 
-export default function Page({ loaderData }: Route.ComponentProps) {
-  return <div>{loaderData.user.email}</div>;
+export default function Page() {
+  const actionData = useActionData<ActionData>();
+  return (
+    <Form method="POST">
+      <FormError actionData={actionData} />
+      <Field>
+        <Label>Title</Label>
+        <Input name="title" invalid={!!actionData?.fieldErrors?.title} />
+        <FieldError name="title" actionData={actionData} />
+      </Field>
+    </Form>
+  );
 }
 ```
 
@@ -81,7 +94,12 @@ Multi-org: scope every query by `organizationId` (read it from the authenticated
 
 ## Validation
 
-Zod for every form/action input. Parse with `parseForm` from [lib/form.ts](lib/form.ts) (action template above) and render messages with `<FieldError name="..." errors={errors} />` from [components/field-error.tsx](components/field-error.tsx) next to each `<Input>`.
+Zod for every form/action input. Parse with `parseForm` from [lib/form.ts](lib/form.ts) (action template above). Actions return the shared `ActionData` shape — `{ fieldErrors?, formError? }` — so every form renders the same way:
+
+- `<FormError actionData={actionData} />` from [components/form-error.tsx](components/form-error.tsx) at the top of the `<Form>` for top-level errors (e.g. "Invalid email or password").
+- `<FieldError name="..." actionData={actionData} />` from [components/field-error.tsx](components/field-error.tsx) next to each `<Input>`, with `invalid={!!actionData?.fieldErrors?.<name>}` on the input.
+
+If an action also needs to return successful data alongside, intersect with the extra fields (`type MyActionData = ActionData & { resentAt?: string }`) — never reuse `formError`/`fieldErrors` for non-error state.
 
 ## UI
 

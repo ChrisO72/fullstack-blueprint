@@ -1,4 +1,4 @@
-import { Outlet, useLocation, useLoaderData } from "react-router";
+import { Form, Outlet, useLocation } from "react-router";
 import { SidebarLayout } from "../components/ui-kit/sidebar-layout";
 import {
   Sidebar,
@@ -27,9 +27,9 @@ export async function loader({ request }: Route.LoaderArgs) {
   return { user };
 }
 
-export default function Layout() {
+export default function Layout({ loaderData }: Route.ComponentProps) {
   const location = useLocation();
-  const { user } = useLoaderData<typeof loader>();
+  const { user } = loaderData;
   const pathname = location.pathname || "/";
 
   return (
@@ -64,24 +64,21 @@ export default function Layout() {
             <ThemeToggle />
             <div className="flex items-center justify-between p-2">
               <div className="flex items-center gap-4">
-                {/* <Avatar
-                  className="size-10"
-                  initials={user.firstName ? user.firstName.slice(0, 1) : user.email.slice(0, 1)}
-                /> */}
                 <div>
                   <div>{user.firstName}</div>
                   <div className="text-xs opacity-60">{user.email}</div>
                 </div>
               </div>
             </div>
-            <SidebarItem href="/logout">
-              <SidebarLabel>Sign out</SidebarLabel>
-            </SidebarItem>
+            <Form method="post" action="/logout">
+              <SidebarItem type="submit">
+                <SidebarLabel>Sign out</SidebarLabel>
+              </SidebarItem>
+            </Form>
           </SidebarFooter>
         </Sidebar>
       }
     >
-      {/* {breadcrumbPages.length > 0 && <Breadcrumb pages={breadcrumbPages} />} */}
       <Outlet />
     </SidebarLayout>
   );

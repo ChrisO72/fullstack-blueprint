@@ -1,20 +1,27 @@
 import { ErrorMessage } from "./ui-kit/fieldset";
-import type { FieldErrors } from "../lib/form";
+import type { ActionData } from "../lib/form";
 
 /**
- * Render the first validation message for `name` from a `parseForm` errors map,
- * or nothing if there is no error. Sits inside `<Field>` next to `<Input>`.
+ * Render the first validation message for `name` from a route action's
+ * `fieldErrors`, or nothing if there is no error. Sits inside `<Field>` next
+ * to `<Input>`.
  *
  * ```tsx
  * <Field>
  *   <Label>Email</Label>
- *   <Input type="email" name="email" invalid={!!errors?.email} />
- *   <FieldError name="email" errors={errors} />
+ *   <Input type="email" name="email" invalid={!!actionData?.fieldErrors?.email} />
+ *   <FieldError name="email" actionData={actionData} />
  * </Field>
  * ```
  */
-export function FieldError({ name, errors }: { name: string; errors?: FieldErrors | null }) {
-  const messages = errors?.[name];
-  if (!messages?.length) return null;
-  return <ErrorMessage>{messages[0]}</ErrorMessage>;
+export function FieldError({
+  name,
+  actionData,
+}: {
+  name: string;
+  actionData?: ActionData | null;
+}) {
+  const message = actionData?.fieldErrors?.[name]?.[0];
+  if (!message) return null;
+  return <ErrorMessage>{message}</ErrorMessage>;
 }

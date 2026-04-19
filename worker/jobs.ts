@@ -13,6 +13,8 @@ export async function processJob(job: Job<JobData[JobName], void, JobName>) {
     case "example":
       await handleExample(job.data as JobData["example"]);
       break;
+    default:
+      throw new Error(`[Worker] Unknown job name: ${job.name}`);
   }
 }
 
