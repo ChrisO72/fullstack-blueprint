@@ -11,7 +11,7 @@ export async function processJob(job: Job<JobData[JobName], void, JobName>) {
 
   switch (job.name) {
     case "example":
-      await handleExample(job.data as JobData["example"]);
+      await handleExample(job.data);
       break;
     default:
       throw new Error(`[Worker] Unknown job name: ${job.name}`);

@@ -31,7 +31,7 @@ export const REFRESH_TOKEN_MAX_AGE = 7 * 24 * 60 * 60;
 const CONFIRMATION_TOKEN_EXPIRY_HOURS = 24;
 
 export async function hashPassword(password: string): Promise<string> {
-  return bcrypt.hash(password, 10);
+  return bcrypt.hash(password, 12);
 }
 
 export async function verifyPassword(password: string, hash: string): Promise<boolean> {

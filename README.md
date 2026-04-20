@@ -1,8 +1,8 @@
 # Fullstack Blueprint
 
-A production-ready template for full-stack Node + React applications.
+Template for full-stack Node + React applications.
 
-**Stack:** React Router 7 (SSR) · Tailwind + Catalyst UI · Drizzle ORM + PostgreSQL · BullMQ + Redis · JWT auth with refresh tokens + multi-org
+**Stack:** React Router 7 (SSR) · Tailwind + Catalyst UI · Drizzle + PostgreSQL · BullMQ + Redis · Auth
 
 ## Prerequisites
 
