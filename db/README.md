@@ -74,15 +74,9 @@ export async function listItemsByOrg(organizationId: number) {
 Add `WHERE deleted_at IS NULL` partial indexes on hot lookup columns so soft-delete filters stay cheap:
 
 ```ts
-export const items = pgTable(
-  "items",
-  {
-    /* columns */
-  },
-  (table) => [
-    index("items_org_active_idx")
-      .on(table.organizationId)
-      .where(sql`deleted_at IS NULL`),
-  ],
-);
+export const items = pgTable("items", {/* columns */}, (table) => [
+  index("items_org_active_idx")
+    .on(table.organizationId)
+    .where(sql`deleted_at IS NULL`),
+]);
 ```

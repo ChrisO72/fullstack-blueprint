@@ -13,8 +13,7 @@ export type ActionData = {
 };
 
 export type ParseFormResult<T> =
-  | { data: T; fieldErrors: null }
-  | { data: null; fieldErrors: FieldErrors };
+  { data: T; fieldErrors: null } | { data: null; fieldErrors: FieldErrors };
 
 export function parseForm<T extends z.ZodType>(
   formData: FormData,

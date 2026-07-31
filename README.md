@@ -6,7 +6,7 @@ Template for full-stack Node + React applications.
 
 ## Prerequisites
 
-- Node.js 20+
+- Node.js 24+
 - Docker (for local Postgres + Redis)
 
 ## Local Development

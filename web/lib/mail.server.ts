@@ -1,9 +1,7 @@
 import { Lettermint } from "lettermint";
 import { env } from "~/env.server";
 
-const lettermint = new Lettermint({
-  apiToken: env.LETTERMINT_API_KEY,
-});
+const lettermint = Lettermint.email(env.LETTERMINT_API_KEY);
 
 const from = env.MAIL_FROM;
 
@@ -14,7 +12,7 @@ export async function sendConfirmationEmail(to: string, token: string) {
 
   let response;
   try {
-    response = await lettermint.email
+    response = await lettermint
       .from(from)
       .to(to)
       .subject("Confirm your email address")
