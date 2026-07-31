@@ -30,7 +30,7 @@ import { FieldError } from "~/components/field-error";
 import { FormError } from "~/components/form-error";
 import { Field, Label } from "~/components/ui-kit/fieldset";
 import { Input } from "~/components/ui-kit/input";
-import { requireAuth } from "~/lib/session.server";
+import { getAuthenticatedUser } from "~/lib/session.server";
 import { parseForm, type ActionData } from "~/lib/form";
 import { createItem } from "~/db/repositories/items";
 
@@ -39,13 +39,13 @@ const createItemSchema = z.object({
   description: z.string().max(1000).optional(),
 });
 
-export async function loader({ request }: Route.LoaderArgs) {
-  const { user } = await requireAuth(request);
+export async function loader({ context }: Route.LoaderArgs) {
+  const user = getAuthenticatedUser(context);
   return { user };
 }
 
-export async function action({ request }: Route.ActionArgs): Promise<ActionData | Response> {
-  const { user } = await requireAuth(request);
+export async function action({ request, context }: Route.ActionArgs): Promise<ActionData | Response> {
+  const user = getAuthenticatedUser(context);
 
   const formData = await request.formData();
   const { data, fieldErrors } = parseForm(formData, createItemSchema);
@@ -70,13 +70,13 @@ export default function Page() {
 }
 ```
 
-`requireAuth` returns `{ user, newAccessToken, newRefreshToken }`. The token fields are non-null only when the access token expired and was rotated via the refresh token; the root layout loader sets the new cookies on the response (see [routes/layout.tsx](routes/layout.tsx)). If the session is invalid or the user record was deleted, `requireAuth` throws a redirect to `/login` (clearing cookies in the deleted-user case), so loaders/actions never need to handle the missing-user branch themselves. Use `requireAdmin` for admin-only routes — it returns the same shape and additionally redirects non-admins to `/`.
+The protected layout middleware calls `requireAuth(request)` once per request, stores the user in `authenticatedUserContext`, and appends rotated access/refresh cookies to the final response (see [routes/layout.tsx](routes/layout.tsx)). This covers both loaders and actions without racing parallel matched loaders. If the session is invalid or the user record was deleted, `requireAuth` redirects to `/login` (clearing cookies in the deleted-user case). Protected loaders/actions read the cached user with `getAuthenticatedUser(context)`. Use `requireAdmin(context)` for admin-only routes; it reads the same cached user and redirects non-admins to `/`.
 
 ## Server boundary
 
 Server-only code lives in `*.server.ts` and is never imported from client components.
 
-- [lib/session.server.ts](lib/session.server.ts) — `requireAuth(request)` for loaders/actions.
+- [lib/session.server.ts](lib/session.server.ts) — auth cookies, protected-route context, and authorization helpers.
 - [lib/auth.server.ts](lib/auth.server.ts) — password hashing, token issuance.
 - [lib/mail.server.ts](lib/mail.server.ts) — outbound email.
 

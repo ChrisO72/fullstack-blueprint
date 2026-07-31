@@ -5,7 +5,7 @@ import {
   createItem,
   softDeleteItem,
 } from "~/db/repositories/items";
-import { requireAuth } from "~/lib/session.server";
+import { getAuthenticatedUser } from "~/lib/session.server";
 import { Heading } from "~/components/ui-kit/heading";
 import {
   Table,
@@ -35,8 +35,8 @@ const deleteItemSchema = z.object({
 const DEFAULT_PAGE_SIZE = 10;
 const PAGE_SIZE_OPTIONS = [5, 10, 25, 50];
 
-export async function loader({ request }: Route.LoaderArgs) {
-  const { user } = await requireAuth(request);
+export async function loader({ request, context }: Route.LoaderArgs) {
+  const user = getAuthenticatedUser(context);
 
   const url = new URL(request.url);
   const pageParam = url.searchParams.get("page");
@@ -66,8 +66,8 @@ export async function loader({ request }: Route.LoaderArgs) {
   };
 }
 
-export async function action({ request }: Route.ActionArgs) {
-  const { user } = await requireAuth(request);
+export async function action({ request, context }: Route.ActionArgs) {
+  const user = getAuthenticatedUser(context);
 
   const url = new URL(request.url);
   const redirectUrl = url.search ? `.${url.search}` : ".";

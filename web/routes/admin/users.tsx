@@ -28,14 +28,14 @@ const updateRoleSchema = z.object({
   role: z.enum(ROLES, { message: "Invalid role" }),
 });
 
-export async function loader({ request }: Route.LoaderArgs) {
-  const { user: currentUser } = await requireAdmin(request);
+export async function loader({ context }: Route.LoaderArgs) {
+  const { user: currentUser } = requireAdmin(context);
   const users = await listUsers();
   return { users, currentUserId: currentUser.id };
 }
 
-export async function action({ request }: Route.ActionArgs) {
-  const { user } = await requireAdmin(request);
+export async function action({ request, context }: Route.ActionArgs) {
+  const { user } = requireAdmin(context);
 
   const formData = await request.formData();
 

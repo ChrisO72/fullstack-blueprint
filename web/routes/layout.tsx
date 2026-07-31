@@ -11,18 +11,32 @@ import {
 } from "../components/ui-kit/sidebar";
 import { Navbar } from "../components/ui-kit/navbar";
 import { ThemeToggle } from "../components/theme-toggle";
-import { requireAuth, setAuthCookies } from "../lib/session.server";
+import {
+  authenticatedUserContext,
+  getAuthenticatedUser,
+  requireAuth,
+  setAuthCookies,
+} from "../lib/session.server";
 import type { Route } from "./+types/layout";
 
-export async function loader({ request }: Route.LoaderArgs) {
-  const { user, newAccessToken, newRefreshToken } = await requireAuth(request);
+export const middleware: Route.MiddlewareFunction[] = [
+  async ({ request, context }, next) => {
+    const { user, newAccessToken, newRefreshToken } = await requireAuth(request);
+    context.set(authenticatedUserContext, user);
 
-  if (newAccessToken && newRefreshToken) {
-    const cookies = await setAuthCookies(newAccessToken, newRefreshToken);
-    const headers = new Headers();
-    cookies.forEach((cookie) => headers.append("Set-Cookie", cookie));
-    return Response.json({ user }, { headers });
-  }
+    const response = await next();
+
+    if (newAccessToken && newRefreshToken) {
+      const cookies = await setAuthCookies(newAccessToken, newRefreshToken);
+      cookies.forEach((cookie) => response.headers.append("Set-Cookie", cookie));
+    }
+
+    return response;
+  },
+];
+
+export function loader({ context }: Route.LoaderArgs) {
+  const user = getAuthenticatedUser(context);
 
   return { user };
 }

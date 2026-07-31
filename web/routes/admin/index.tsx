@@ -18,14 +18,14 @@ const settingsSchema = z.object({
   requireMailConfirmation: z.boolean().default(false),
 });
 
-export async function loader({ request }: Route.LoaderArgs) {
-  await requireAdmin(request);
+export async function loader({ context }: Route.LoaderArgs) {
+  requireAdmin(context);
   const settings = await getSiteSettings();
   return { settings };
 }
 
-export async function action({ request }: Route.ActionArgs): Promise<ActionData> {
-  await requireAdmin(request);
+export async function action({ request, context }: Route.ActionArgs): Promise<ActionData> {
+  requireAdmin(context);
 
   const formData = await request.formData();
 

@@ -1,4 +1,4 @@
-import { createCookie, redirect } from "react-router";
+import { createContext, createCookie, redirect, type RouterContextProvider } from "react-router";
 import {
   ACCESS_TOKEN_MAX_AGE,
   REFRESH_TOKEN_MAX_AGE,
@@ -7,8 +7,11 @@ import {
 } from "./auth.server";
 import { env } from "~/env.server";
 import { getUserById } from "~/db/repositories/users";
+import type { SelectUser } from "~/db/schema";
 
 const isProduction = env.NODE_ENV === "production";
+
+export const authenticatedUserContext = createContext<SelectUser>();
 
 export const accessTokenCookie = createCookie("accessToken", {
   httpOnly: true,
@@ -81,12 +84,16 @@ export async function requireAuth(request: Request) {
   return { user, newAccessToken, newRefreshToken };
 }
 
-export async function requireAdmin(request: Request) {
-  const auth = await requireAuth(request);
-  if (auth.user.role !== "admin") {
+export function getAuthenticatedUser(context: Readonly<RouterContextProvider>) {
+  return context.get(authenticatedUserContext);
+}
+
+export function requireAdmin(context: Readonly<RouterContextProvider>) {
+  const user = getAuthenticatedUser(context);
+  if (user.role !== "admin") {
     throw redirect("/");
   }
-  return auth;
+  return { user };
 }
 
 export async function setAuthCookies(accessToken: string, refreshToken: string): Promise<string[]> {
