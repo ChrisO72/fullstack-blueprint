@@ -1,6 +1,6 @@
 import { and, count, eq, isNull } from "drizzle-orm";
 import { db } from "../db";
-import { type InsertItem, items } from "../schema";
+import { type InsertItem, items } from "../schema/items";
 
 export async function createItem(item: InsertItem) {
   return await db.insert(items).values(item).returning();

@@ -47,7 +47,7 @@ export default defineConfig([
             {
               regex: "^\\.\\./\\.\\./",
               message:
-                "Use the ~/* (web), ~/db/* (db), or ~/env.server alias instead of ../../ deep relative imports. See README.md → Conventions.",
+                "Use the ~/* (web), ~/db/* (db), ~/worker/* (worker), or ~/env.server alias instead of ../../ deep relative imports. See README.md → Conventions.",
             },
           ],
         },

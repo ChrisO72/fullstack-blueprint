@@ -1,25 +1,12 @@
-import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
 import crypto from "crypto";
-import { env } from "~/env.server";
-import { createOrganization } from "~/db/repositories/organizations";
-import {
-  countUsers,
-  createUser,
-  getUserByEmail,
-  getUserById,
-  updateUser,
-} from "~/db/repositories/users";
+import jwt from "jsonwebtoken";
 import {
   deleteRefreshTokenByHash,
   findRefreshTokenByHash,
   insertRefreshToken,
 } from "~/db/repositories/refreshTokens";
-import {
-  deleteEmailConfirmationToken,
-  findEmailConfirmationToken,
-  insertEmailConfirmationToken,
-} from "~/db/repositories/emailConfirmationTokens";
+import { getUserById } from "~/db/repositories/users";
+import { env } from "~/env.server";
 
 const JWT_SECRET = env.JWT_SECRET;
 const REFRESH_SECRET = env.REFRESH_SECRET;
@@ -28,15 +15,6 @@ const REFRESH_SECRET = env.REFRESH_SECRET;
 // JWT `expiresIn` and the cookie `maxAge` (see session.server.ts).
 export const ACCESS_TOKEN_MAX_AGE = 15 * 60;
 export const REFRESH_TOKEN_MAX_AGE = 7 * 24 * 60 * 60;
-const CONFIRMATION_TOKEN_EXPIRY_HOURS = 24;
-
-export async function hashPassword(password: string): Promise<string> {
-  return bcrypt.hash(password, 12);
-}
-
-export async function verifyPassword(password: string, hash: string): Promise<boolean> {
-  return bcrypt.compare(password, hash);
-}
 
 export function generateAccessToken(userId: number, email: string): string {
   return jwt.sign({ userId, email }, JWT_SECRET, {
@@ -79,33 +57,6 @@ export function hashRefreshToken(token: string): string {
   return crypto.createHash("sha256").update(token).digest("hex");
 }
 
-export async function validateLogin(email: string, password: string) {
-  const user = await getUserByEmail(email);
-  if (!user || !user.passwordHash) return null;
-
-  const valid = await verifyPassword(password, user.passwordHash);
-  return valid ? user : null;
-}
-
-export async function createUserWithPassword(email: string, password: string, firstname?: string) {
-  const passwordHash = await hashPassword(password);
-  const isFirstUser = (await countUsers()) === 0;
-
-  const [org] = await createOrganization({
-    name: `${firstname || email}'s Organization`,
-  });
-
-  const [user] = await createUser({
-    email: email.toLowerCase(),
-    passwordHash,
-    firstName: firstname || null,
-    organizationId: org.id,
-    role: isFirstUser ? "admin" : "user",
-  });
-
-  return user;
-}
-
 export async function createTokens(userId: number, email: string) {
   const accessToken = generateAccessToken(userId, email);
   const refreshToken = generateRefreshToken(userId);
@@ -132,24 +83,4 @@ export async function refreshAccessToken(token: string) {
   const { accessToken, refreshToken } = await createTokens(user.id, user.email);
 
   return { accessToken, refreshToken, user };
-}
-
-export async function createEmailConfirmationToken(userId: number): Promise<string> {
-  const token = crypto.randomUUID();
-  const expiresAt = new Date(Date.now() + CONFIRMATION_TOKEN_EXPIRY_HOURS * 60 * 60 * 1000);
-
-  await insertEmailConfirmationToken({ userId, token, expiresAt });
-  return token;
-}
-
-export async function verifyEmailConfirmationToken(token: string) {
-  const row = await findEmailConfirmationToken(token);
-  if (!row) return null;
-
-  return await getUserById(row.userId);
-}
-
-export async function confirmUserEmail(userId: number, token: string) {
-  await updateUser(userId, { emailConfirmedAt: new Date() });
-  await deleteEmailConfirmationToken(token);
 }

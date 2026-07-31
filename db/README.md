@@ -4,14 +4,15 @@ Drizzle ORM + PostgreSQL. See the repo-root [README.md](../README.md) for stack 
 
 ## Files
 
-- [schema.ts](schema.ts) — single source of truth for tables. Edit here.
+- `schema/` — table definitions grouped by domain (`auth.ts`, `items.ts`, `organizations.ts`, `settings.ts`).
+- [schema/shared.ts](schema/shared.ts) — shared column definitions such as standard timestamps.
 - [db.ts](db.ts) — the configured Drizzle client. Import only inside repositories.
 - [repositories/](repositories/) — one file per table, exporting CRUD + relation helpers.
 - `drizzle/` — generated migrations (output of `npm run db:generate`).
 
 ## Schema change workflow
 
-1. Edit [schema.ts](schema.ts).
+1. Edit the relevant domain module under `schema/`.
 2. Generate a migration:
 
    ```bash
@@ -24,23 +25,16 @@ Drizzle ORM + PostgreSQL. See the repo-root [README.md](../README.md) for stack 
    npm run db:migrate
    ```
 
-4. Commit `schema.ts` and the new migration files together.
+4. Commit the changed schema module and the new migration files together.
 
 ## Best practices
 
 ### Use the standard `timestamps` spread
 
-Every domain table should include `createdAt`, `updatedAt`, and `deletedAt` via the shared spread in [schema.ts](schema.ts):
+Every domain table should include `createdAt`, `updatedAt`, and `deletedAt` via the shared spread in [schema/shared.ts](schema/shared.ts):
 
 ```ts
-const timestamps = {
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at")
-    .defaultNow()
-    .$onUpdate(() => new Date())
-    .notNull(),
-  deletedAt: timestamp("deleted_at"),
-};
+import { timestamps } from "./shared";
 
 export const items = pgTable("items", {
   id: integer().primaryKey().generatedAlwaysAsIdentity(),

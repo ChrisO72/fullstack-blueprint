@@ -77,8 +77,8 @@ The protected layout middleware calls `requireAuth(request)` once per request, s
 Server-only code lives in `*.server.ts` and is never imported from client components.
 
 - [lib/session.server.ts](lib/session.server.ts) — auth cookies, protected-route context, and authorization helpers.
-- [lib/auth.server.ts](lib/auth.server.ts) — password hashing, token issuance.
-- [lib/mail.server.ts](lib/mail.server.ts) — outbound email.
+- `lib/auth/` — password validation, registration, session tokens, and email-confirmation tokens in focused server modules.
+- `lib/mail/` — outbound mail transport and one server module per email type.
 
 ## Data access
 

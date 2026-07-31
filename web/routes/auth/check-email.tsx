@@ -7,9 +7,10 @@ import { Heading } from "~/components/ui-kit/heading";
 import { Strong, Text, TextLink } from "~/components/ui-kit/text";
 import { getUserByEmail } from "~/db/repositories/users";
 import { getLatestEmailConfirmationTokenCreatedAt } from "~/db/repositories/emailConfirmationTokens";
-import { createEmailConfirmationToken, verifyAccessToken } from "~/lib/auth.server";
+import { createEmailConfirmationToken } from "~/lib/auth/email-confirmation.server";
+import { verifyAccessToken } from "~/lib/auth/tokens.server";
 import type { ActionData } from "~/lib/form";
-import { sendConfirmationEmail } from "~/lib/mail.server";
+import { sendConfirmationEmail } from "~/lib/mail/confirmation.server";
 import { readAccessTokenCookie } from "~/lib/session.server";
 import type { Route } from "./+types/check-email";
 

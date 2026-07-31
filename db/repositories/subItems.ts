@@ -1,6 +1,6 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "../db";
-import { type InsertSubItem, subItems, items } from "../schema";
+import { type InsertSubItem, subItems, items } from "../schema/items";
 
 export async function createSubItem(subItem: InsertSubItem, organizationId: number) {
   // Verify parent item belongs to the organization

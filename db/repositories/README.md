@@ -11,7 +11,7 @@ Each repository file exports functions for CRUD operations on a specific table.
 ```typescript
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "../db";
-import { type InsertUser, users } from "../schema";
+import { type InsertUser, users } from "../schema/auth";
 
 // Create
 export async function createUser(user: InsertUser) {

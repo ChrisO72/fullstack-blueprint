@@ -1,11 +1,11 @@
 import { Worker } from "bullmq";
 import { redisConnection } from "./redis";
-import { processJob } from "./jobs";
-import { startScheduler } from "./scheduler";
+import { processJob } from "./jobs/dispatcher";
+import { startSchedules } from "./schedules/register";
 
 const worker = new Worker("default", processJob, { connection: redisConnection });
 
-startScheduler();
+startSchedules();
 
 console.log("[Worker] Ready");
 

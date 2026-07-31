@@ -11,6 +11,7 @@
     "paths": {
       "~/*": ["./web/*"],
       "~/db/*": ["./db/*"],
+      "~/worker/*": ["./worker/*"],
       "~/env.server": ["./env.server.ts"]
     },
     "esModuleInterop": true,

@@ -4,74 +4,61 @@ Background job processing with BullMQ + node-cron.
 
 ## Pattern
 
-Jobs are typed and processed through a central handler. Cron schedules enqueue jobs to the queue.
+Each job owns its name, payload type, and handler. The dispatcher connects those modules to BullMQ,
+and all producers enqueue through the typed `enqueueJob` API.
 
 ### Defining Jobs
 
 ```typescript
-// jobs.ts
-export type JobData = {
-  example: { message: string };
-  sendEmail: { to: string; subject: string; body: string };
-  syncUser: { userId: number };
+// jobs/send-email.ts
+export const sendEmailJobName = "sendEmail" as const;
+
+export type SendEmailJobData = {
+  to: string;
+  subject: string;
+  body: string;
 };
 
-export type JobName = keyof JobData;
-
-export async function processJob(job: Job<JobData[JobName], void, JobName>) {
-  switch (job.name) {
-    case "example":
-      await handleExample(job.data as JobData["example"]);
-      break;
-    case "sendEmail":
-      await handleSendEmail(job.data as JobData["sendEmail"]);
-      break;
-    case "syncUser":
-      await handleSyncUser(job.data as JobData["syncUser"]);
-      break;
-  }
-}
-
-async function handleSendEmail(data: JobData["sendEmail"]) {
+export async function handleSendEmailJob(data: SendEmailJobData) {
   // send email logic
 }
+```
 
-async function handleSyncUser(data: JobData["syncUser"]) {
-  // sync user logic
-}
+Register the job in `jobs/dispatcher.ts` by importing its name, data type, and handler, adding it to
+`JobData`, and adding a matching switch case:
+
+```typescript
+export type JobData = {
+  [exampleJobName]: ExampleJobData;
+  [sendEmailJobName]: SendEmailJobData;
+};
 ```
 
 ### Scheduling Jobs
 
 ```typescript
-// scheduler.ts
+// schedules/hourly-sync.ts
 import cron from "node-cron";
-import { defaultQueue } from "./queues";
+import { enqueueJob } from "../enqueue";
+import { syncUserJobName } from "../jobs/sync-user";
 
-export function startScheduler() {
-  // Every hour
+export function registerHourlySyncSchedule() {
   cron.schedule("0 * * * *", async () => {
-    await defaultQueue.add("syncUser", { userId: 123 });
-  });
-
-  // Daily at 9am
-  cron.schedule("0 9 * * *", async () => {
-    await defaultQueue.add("sendEmail", {
-      to: "team@example.com",
-      subject: "Daily Report",
-      body: "...",
-    });
+    await enqueueJob(syncUserJobName, { userId: 123 });
   });
 }
 ```
 
+Import each registration function in `schedules/register.ts` and call it from `startSchedules`.
+
 ### Enqueue from App
 
 ```typescript
-import { defaultQueue } from "../worker/queues";
+import { enqueueJob } from "~/worker/enqueue";
+import { sendEmailJobName } from "~/worker/jobs/send-email";
 
 // In a route action or loader
-await defaultQueue.add("sendEmail", {
+await enqueueJob(sendEmailJobName, {
   to: user.email,
   subject: "Welcome",
   body: "Thanks for signing up!",
@@ -80,7 +67,9 @@ await defaultQueue.add("sendEmail", {
 
 ## Guidelines
 
-- Add job types to `JobData` for type safety
-- Keep handlers focused and minimal
+- Keep each job's payload type in its job file
+- Register every job in `jobs/dispatcher.ts`
+- Enqueue through `enqueueJob`; do not call the queue directly
+- Keep handlers and schedule callbacks focused and minimal
 - Use cron expressions: `* * * * *` (min hour day month weekday)
 - Jobs auto-retry on failure (BullMQ default: 3 attempts)

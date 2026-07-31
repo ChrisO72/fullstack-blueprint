@@ -1,6 +1,6 @@
 import { and, desc, eq, gt } from "drizzle-orm";
 import { db } from "../db";
-import { emailConfirmationTokens, type InsertEmailConfirmationToken } from "../schema";
+import { emailConfirmationTokens, type InsertEmailConfirmationToken } from "../schema/auth";
 
 export async function insertEmailConfirmationToken(data: InsertEmailConfirmationToken) {
   const [row] = await db.insert(emailConfirmationTokens).values(data).returning();

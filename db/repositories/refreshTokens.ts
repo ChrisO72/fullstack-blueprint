@@ -1,6 +1,6 @@
 import { and, eq, gt } from "drizzle-orm";
 import { db } from "../db";
-import { type InsertRefreshToken, refreshTokens } from "../schema";
+import { type InsertRefreshToken, refreshTokens } from "../schema/auth";
 
 export async function insertRefreshToken(data: InsertRefreshToken) {
   const [row] = await db.insert(refreshTokens).values(data).returning();

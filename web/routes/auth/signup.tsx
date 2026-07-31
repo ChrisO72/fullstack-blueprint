@@ -10,15 +10,12 @@ import { Input } from "~/components/ui-kit/input";
 import { Strong, Text, TextLink } from "~/components/ui-kit/text";
 import { getSiteSettings } from "~/db/repositories/settings";
 import { getUserByEmail } from "~/db/repositories/users";
-import {
-  createEmailConfirmationToken,
-  createTokens,
-  createUserWithPassword,
-  verifyAccessToken,
-} from "~/lib/auth.server";
+import { createEmailConfirmationToken } from "~/lib/auth/email-confirmation.server";
+import { createUserWithPassword } from "~/lib/auth/registration.server";
+import { createTokens, verifyAccessToken } from "~/lib/auth/tokens.server";
 import { parseForm, type ActionData } from "~/lib/form";
 import { readAccessTokenCookie, setAuthCookies } from "~/lib/session.server";
-import { sendConfirmationEmail } from "~/lib/mail.server";
+import { sendConfirmationEmail } from "~/lib/mail/confirmation.server";
 import type { Route } from "./+types/signup";
 
 const signupSchema = z.object({

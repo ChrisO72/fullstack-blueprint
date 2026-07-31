@@ -4,10 +4,10 @@ import {
   REFRESH_TOKEN_MAX_AGE,
   refreshAccessToken,
   verifyAccessToken,
-} from "./auth.server";
+} from "./auth/tokens.server";
 import { env } from "~/env.server";
 import { getUserById } from "~/db/repositories/users";
-import type { SelectUser } from "~/db/schema";
+import type { SelectUser } from "~/db/schema/auth";
 
 const isProduction = env.NODE_ENV === "production";
 

@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db } from "../db";
-import { siteSettings, type SelectSiteSettings } from "../schema";
+import { siteSettings, type SelectSiteSettings } from "../schema/settings";
 
 export async function getSiteSettings(): Promise<SelectSiteSettings> {
   const [existing] = await db.select().from(siteSettings).limit(1);
