@@ -51,6 +51,11 @@ export function registerHourlySyncSchedule() {
 
 Import each registration function in `schedules/register.ts` and call it from `startSchedules`.
 
+The included `cleanupStaleFiles` schedule runs daily. It enqueues one organization-scoped job per
+active organization to delete objects left by uploads that have remained `pending` for 24 hours,
+then marks their metadata as `failed`. Its queue options provide three attempts with exponential
+backoff.
+
 ### Enqueue from App
 
 ```typescript
@@ -72,4 +77,4 @@ await enqueueJob(sendEmailJobName, {
 - Enqueue through `enqueueJob`; do not call the queue directly
 - Keep handlers and schedule callbacks focused and minimal
 - Use cron expressions: `* * * * *` (min hour day month weekday)
-- Jobs auto-retry on failure (BullMQ default: 3 attempts)
+- Configure `attempts` and `backoff` when a job should retry; BullMQ jobs run once by default

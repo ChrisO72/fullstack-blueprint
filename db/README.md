@@ -4,7 +4,7 @@ Drizzle ORM + PostgreSQL. See the repo-root [README.md](../README.md) for stack 
 
 ## Files
 
-- `schema/` — table definitions grouped by domain (`auth.ts`, `items.ts`, `organizations.ts`, `settings.ts`).
+- `schema/` — table definitions grouped by domain (`auth.ts`, `files.ts`, `items.ts`, `organizations.ts`, `settings.ts`).
 - [schema/shared.ts](schema/shared.ts) — shared column definitions such as standard timestamps.
 - [db.ts](db.ts) — the configured Drizzle client. Import only inside repositories.
 - [repositories/](repositories/) — one file per table, exporting CRUD + relation helpers.

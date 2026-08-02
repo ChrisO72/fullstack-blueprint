@@ -6,6 +6,7 @@ export default defineConfig({
   schema: [
     "./db/schema/organizations.ts",
     "./db/schema/auth.ts",
+    "./db/schema/files.ts",
     "./db/schema/items.ts",
     "./db/schema/settings.ts",
   ],

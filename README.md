@@ -2,12 +2,12 @@
 
 Template for full-stack Node + React applications.
 
-**Stack:** React Router 7 (SSR) · Tailwind + Catalyst UI · Drizzle + PostgreSQL · BullMQ + Redis · Auth
+**Stack:** React Router 7 (SSR) · Tailwind + Catalyst UI · Drizzle + PostgreSQL · BullMQ + Redis · S3-compatible file storage · Auth
 
 ## Prerequisites
 
 - Node.js 24+
-- Docker (for local Postgres + Redis)
+- Docker (for local Postgres, Redis, and object storage)
 
 ## Local Development
 
@@ -16,11 +16,13 @@ Template for full-stack Node + React applications.
 ```bash
 npm install
 cp .env.example .env          # configure env vars
-npm run docker:up              # start Postgres + Redis containers
+npm run docker:up              # start Postgres, Redis, and object storage
 npm run db:migrate             # apply database migrations
 ```
 
-Postgres is exposed on `:55432`, Redis on `:6379`.
+Postgres is exposed on `:55432`, Redis on `:6379`, and the S3-compatible API on `:9000`.
+The local object-storage console is available at `http://localhost:9001`; credentials are in
+[`.env.example`](.env.example).
 
 ### Start dev server
 
@@ -30,7 +32,7 @@ npm run dev
 
 The app runs at `http://localhost:5173`.
 
-### Database & Queue
+### Local services
 
 ```bash
 npm run docker:up              # start
@@ -53,7 +55,9 @@ npm run start                  # run both via concurrently (single-box / smoke t
 
 For real deployments, run `start:web` and `start:worker` as separate processes under a supervisor (Docker, Kubernetes etc.) so each gets its own logs, restart policy, and scaling. `npm start` uses `concurrently --kill-others-on-fail`, so a crash in either process tears the other down — useful for local prod-like runs, but no substitute for a supervisor.
 
-Set `DATABASE_URL` and `REDIS_URL` to your managed instances. See `.env.example` for all required variables.
+Set `DATABASE_URL`, `REDIS_URL`, and the `S3_*` variables to your managed services. AWS deployments
+can omit the S3 endpoint and static credentials to use the regional endpoint and IAM role. See
+[`.env.example`](.env.example) and [storage/README.md](storage/README.md).
 
 ## Checks
 
@@ -68,10 +72,11 @@ npm run check                  # typecheck + lint + format (required pre-commit 
 - [web/](web/) — React Router 7 SSR app. See [web/README.md](web/README.md) for routing, server boundary, validation, data access, and UI patterns.
 - [worker/](worker/) — BullMQ jobs + node-cron scheduler. See [worker/README.md](worker/README.md) for the job/scheduler templates.
 - [db/](db/) — Domain schema modules, generated migrations, repository functions. See [db/README.md](db/README.md) for the schema workflow and [db/repositories/README.md](db/repositories/README.md) for the repository template.
+- [storage/](storage/) — shared server-only S3 operations. See [storage/README.md](storage/README.md) for local and production setup.
 
 ## Conventions
 
-- **Path aliases** (see [tsconfig.json](tsconfig.json)): `~/*` → `web/*`, `~/db/*` → `db/*`, `~/worker/*` → `worker/*`, `~/env.server` → [env.server.ts](env.server.ts). Use these for any cross-package or multi-level import; single-parent relative paths (`./foo`, `../foo`) are fine for siblings inside the same package. ESLint's `no-restricted-imports` blocks anything starting with `../../` to keep this consistent.
+- **Path aliases** (see [tsconfig.json](tsconfig.json)): `~/*` → `web/*`, `~/db/*` → `db/*`, `~/storage/*` → `storage/*`, `~/worker/*` → `worker/*`, `~/env.server` → [env.server.ts](env.server.ts). Use these for any cross-package or multi-level import; single-parent relative paths (`./foo`, `../foo`) are fine for siblings inside the same package. ESLint's `no-restricted-imports` blocks anything starting with `../../` to keep this consistent.
 - **Server-only modules end in `.server.ts`** and must never be imported from client components (e.g. [web/lib/auth/tokens.server.ts](web/lib/auth/tokens.server.ts), [web/lib/session.server.ts](web/lib/session.server.ts)).
 - **Generated dirs**: `.react-router/`, `build/`, and `db/drizzle/` are generated — `db/drizzle/` by `npm run db:generate`.
 - **Secrets**: `.env` is git-ignored; use `.env.example` for the schema. All env vars are validated at boot in [env.server.ts](env.server.ts)

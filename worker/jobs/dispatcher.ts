@@ -1,7 +1,13 @@
 import type { Job } from "bullmq";
+import {
+  cleanupStaleFilesJobName,
+  handleCleanupStaleFilesJob,
+  type CleanupStaleFilesJobData,
+} from "./cleanup-stale-files";
 import { exampleJobName, handleExampleJob, type ExampleJobData } from "./example";
 
 export type JobData = {
+  [cleanupStaleFilesJobName]: CleanupStaleFilesJobData;
   [exampleJobName]: ExampleJobData;
 };
 
@@ -16,6 +22,9 @@ export async function processJob(job: Job<JobData[JobName], void, JobName>) {
 
   const typedJob = job as TypedJob;
   switch (typedJob.name) {
+    case cleanupStaleFilesJobName:
+      await handleCleanupStaleFilesJob(typedJob.data);
+      break;
     case exampleJobName:
       await handleExampleJob(typedJob.data);
       break;

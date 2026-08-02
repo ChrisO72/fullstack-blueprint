@@ -9,6 +9,7 @@ export default defineConfig({
   resolve: {
     alias: [
       { find: "~/db", replacement: fileURLToPath(new URL("./db", import.meta.url)) },
+      { find: "~/storage", replacement: fileURLToPath(new URL("./storage", import.meta.url)) },
       {
         find: "~/env.server",
         replacement: fileURLToPath(new URL("./env.server.ts", import.meta.url)),

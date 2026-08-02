@@ -64,6 +64,9 @@ export default function Layout({ loaderData }: Route.ComponentProps) {
               <SidebarItem href="/do-things" current={pathname.startsWith("/do-things")}>
                 <SidebarLabel>Do things</SidebarLabel>
               </SidebarItem>
+              <SidebarItem href="/files" current={pathname.startsWith("/files")}>
+                <SidebarLabel>Files</SidebarLabel>
+              </SidebarItem>
               <SidebarItem href="/manage-items" current={pathname.startsWith("/manage-items")}>
                 <SidebarLabel>Manage Items</SidebarLabel>
               </SidebarItem>

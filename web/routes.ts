@@ -12,6 +12,8 @@ export default [
   layout("routes/layout.tsx", [
     index("routes/home.tsx"),
     route("do-things", "routes/do-things/index.tsx"),
+    route("files", "routes/files/index.tsx"),
+    route("files/:fileId/download", "routes/files/download.ts"),
     route("manage-items", "routes/manage-items/index.tsx"),
     route("manage-items/:item", "routes/manage-items/item.tsx"),
     layout("routes/admin/layout.tsx", [
