@@ -4,6 +4,9 @@ import { z } from "zod";
 const envSchema = z
   .object({
     NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
+    LOG_LEVEL_THRESHOLD: z
+      .enum(["debug", "info", "warn", "error", "fatal", "silent"])
+      .default("info"),
     DATABASE_URL: z.url(),
     REDIS_URL: z.url(),
     RATE_LIMIT_KEY_SECRET: z

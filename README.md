@@ -59,6 +59,12 @@ Set `DATABASE_URL`, `REDIS_URL`, and the `S3_*` variables to your managed servic
 can omit the S3 endpoint and static credentials to use the regional endpoint and IAM role. See
 [`.env.example`](.env.example) and [storage/README.md](storage/README.md).
 
+## Structured logs
+
+Server logs are redacted and written to standard output, pretty-printed in development and emitted
+as newline-delimited JSON in production. See [observability/README.md](observability/README.md) for
+the event contract, configuration, and logging policy.
+
 ## Checks
 
 ```bash
@@ -89,7 +95,7 @@ formatting, and test commands similar to `npm run check` but without writing dur
 
 ## Conventions
 
-- **Path aliases** (see [tsconfig.json](tsconfig.json)): `~/*` → `web/*`, `~/db/*` → `db/*`, `~/mail/*` → `mail/*`, `~/storage/*` → `storage/*`, `~/worker/*` → `worker/*`, `~/env.server` → [env.server.ts](env.server.ts). Use these for any cross-package or multi-level import; single-parent relative paths (`./foo`, `../foo`) are fine for siblings inside the same package. ESLint's `no-restricted-imports` blocks anything starting with `../../` to keep this consistent.
+- **Path aliases** (see [tsconfig.json](tsconfig.json)): `~/*` → `web/*`, `~/db/*` → `db/*`, `~/mail/*` → `mail/*`, `~/observability/*` → `observability/*`, `~/storage/*` → `storage/*`, `~/worker/*` → `worker/*`, `~/env.server` → [env.server.ts](env.server.ts). Use these for any cross-package or multi-level import; single-parent relative paths (`./foo`, `../foo`) are fine for siblings inside the same package. ESLint's `no-restricted-imports` blocks anything starting with `../../` to keep this consistent.
 - **Server-only modules end in `.server.ts`** and must never be imported from client components (e.g. [web/lib/auth/tokens.server.ts](web/lib/auth/tokens.server.ts), [web/lib/session.server.ts](web/lib/session.server.ts)).
 - **Generated dirs**: `.react-router/`, `build/`, and `db/drizzle/` are generated — `db/drizzle/` by `npm run db:generate`.
 - **Secrets**: `.env` is git-ignored; use `.env.example` for the schema. All env vars are validated at boot in [env.server.ts](env.server.ts)

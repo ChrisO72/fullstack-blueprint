@@ -73,9 +73,8 @@ export async function action({
       token,
       expiresInHours: PASSWORD_RESET_TOKEN_EXPIRY_HOURS,
     });
-  } catch (error) {
+  } catch {
     await deletePasswordResetToken(token);
-    console.error("[auth] Failed to enqueue password reset email:", error);
   }
 
   return { success: true };

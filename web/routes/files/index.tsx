@@ -33,6 +33,7 @@ import {
   isFileStorageEnabled,
   MAX_UPLOAD_BYTES,
 } from "~/storage/objects.server";
+import { createLogger } from "~/observability/logger.server";
 import { enqueueJob } from "~/worker/enqueue";
 import {
   expirePendingFileUploadJobName,
@@ -41,6 +42,8 @@ import {
 import type { Route } from "./+types/index";
 import { Pagination } from "../items/Pagination";
 import { UploadFileDialog } from "./UploadFileDialog";
+
+const logger = createLogger("web");
 
 const prepareUploadSchema = z.object({
   intent: z.literal("prepare"),
@@ -137,7 +140,7 @@ export async function action({
         await deleteStoredFile(file.storageKey);
         await softDeleteFile(file.id, user.organizationId);
       } catch (error) {
-        console.error("Failed to delete stored file", error);
+        logger.error("file.delete.failed", error, { fileId: file.id });
         return { intent: "delete", formError: "The file could not be deleted. Please try again." };
       }
     }
@@ -191,7 +194,7 @@ export async function action({
         },
       };
     } catch (error) {
-      console.error("Failed to prepare file upload", error);
+      logger.error("file.prepare.failed", error, { fileId: file.id });
       await markFileFailed(file.id, user.organizationId);
       return { intent, formError: "The upload could not be prepared. Please try again." };
     }
@@ -234,7 +237,7 @@ export async function action({
 
       return { intent, success: true, fileId: file.id };
     } catch (error) {
-      console.error("Failed to confirm stored file", error);
+      logger.error("file.confirm.failed", error, { fileId: file.id });
       return {
         intent,
         formError: "The uploaded file could not be verified. Please try again.",

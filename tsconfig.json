@@ -12,6 +12,7 @@
       "~/*": ["./web/*"],
       "~/db/*": ["./db/*"],
       "~/mail/*": ["./mail/*"],
+      "~/observability/*": ["./observability/*"],
       "~/storage/*": ["./storage/*"],
       "~/worker/*": ["./worker/*"],
       "~/env.server": ["./env.server.ts"]

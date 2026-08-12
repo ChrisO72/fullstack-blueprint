@@ -1,6 +1,9 @@
 import { createHmac } from "node:crypto";
 import Redis from "ioredis";
 import { env } from "~/env.server";
+import { createLogger } from "~/observability/logger.server";
+
+const logger = createLogger("web");
 
 export type AuthRateLimitAction = "login" | "signup" | "password-reset" | "resend";
 
@@ -25,7 +28,7 @@ type CreateAuthRateLimiterOptions = {
   store: RateLimitStore;
   keySecret: string;
   policies?: AuthRateLimitPolicies;
-  onStoreError?: () => void;
+  onStoreError?: (error: unknown) => void;
 };
 
 type CheckAuthRateLimitInput = {
@@ -120,8 +123,8 @@ export function createAuthRateLimiter({
         allowed: false,
         retryAfterSeconds: counter.retryAfterSeconds,
       };
-    } catch {
-      onStoreError?.();
+    } catch (error) {
+      onStoreError?.(error);
       return { allowed: true };
     }
   };
@@ -140,7 +143,7 @@ export function createRateLimitResponse(retryAfterSeconds: number): Response {
 export const checkAuthRateLimit = createAuthRateLimiter({
   store: redisRateLimitStore,
   keySecret: env.RATE_LIMIT_KEY_SECRET,
-  onStoreError: () => {
-    console.error("[auth-rate-limit] Redis unavailable; allowing request");
+  onStoreError: (error) => {
+    logger.error("auth.rate_limit.store_unavailable", error, { failMode: "open" });
   },
 });

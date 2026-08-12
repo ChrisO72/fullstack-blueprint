@@ -1,4 +1,5 @@
 import type { Job } from "bullmq";
+import { createLogger, runWithLogContext } from "~/observability/logger.server";
 import {
   expirePendingFileUploadJobName,
   handleExpirePendingFileUploadJob,
@@ -15,6 +16,8 @@ import {
   type SendPasswordResetEmailJobData,
 } from "./send-password-reset-email";
 
+const logger = createLogger("worker");
+
 export type JobData = {
   [expirePendingFileUploadJobName]: ExpirePendingFileUploadJobData;
   [sendConfirmationEmailJobName]: SendConfirmationEmailJobData;
@@ -28,26 +31,31 @@ type TypedJob = {
 }[JobName];
 
 export async function processJob(job: Job<JobData[JobName], void, JobName>) {
-  console.log("[Worker] Processing job", {
-    name: job.name,
-    id: job.id,
-    attempt: job.attemptsMade + 1,
-    queuedAt: new Date(job.timestamp).toISOString(),
-    processingStartedAt: job.processedOn ? new Date(job.processedOn).toISOString() : null,
-  });
+  const jobId = String(job.id ?? "unknown");
+  const attempt = job.attemptsMade + 1;
+  const processedOn = job.processedOn ?? Date.now();
+  const queueWaitMs = Math.max(0, processedOn - job.timestamp - (job.opts.delay ?? 0));
 
-  const typedJob = job as TypedJob;
-  switch (typedJob.name) {
-    case expirePendingFileUploadJobName:
-      await handleExpirePendingFileUploadJob(typedJob.data);
-      break;
-    case sendConfirmationEmailJobName:
-      await handleSendConfirmationEmailJob(typedJob.data);
-      break;
-    case sendPasswordResetEmailJobName:
-      await handleSendPasswordResetEmailJob(typedJob.data);
-      break;
-    default:
-      throw new Error(`[Worker] Unknown job name: ${job.name}`);
-  }
+  return runWithLogContext({ jobId, jobName: job.name, attempt }, async () => {
+    logger.info("queue.job.started", {
+      queueWaitMs,
+      queuedAt: new Date(job.timestamp).toISOString(),
+      processingStartedAt: new Date(processedOn).toISOString(),
+    });
+
+    const typedJob = job as TypedJob;
+    switch (typedJob.name) {
+      case expirePendingFileUploadJobName:
+        await handleExpirePendingFileUploadJob(typedJob.data);
+        break;
+      case sendConfirmationEmailJobName:
+        await handleSendConfirmationEmailJob(typedJob.data);
+        break;
+      case sendPasswordResetEmailJobName:
+        await handleSendPasswordResetEmailJob(typedJob.data);
+        break;
+      default:
+        throw new Error(`Unknown job name: ${job.name}`);
+    }
+  });
 }
