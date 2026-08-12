@@ -21,12 +21,13 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "typecheck": "react-router typegen && tsc",
-    "check": "react-router typegen && tsc && eslint . && prettier --check .",
+    "check": "react-router typegen && tsc && eslint . && prettier --check . && npm test",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "docker:wipe": "docker compose down -v",
     "format": "npx prettier . --write",
-    "format:check": "npx prettier . --check"
+    "format:check": "npx prettier . --check",
+    "test": "tsx test/run.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1101.0",
@@ -76,6 +77,7 @@
     "tsx": "^4.23.1",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.65.0",
-    "vite": "^8.2.0"
+    "vite": "^8.2.0",
+    "vitest": "^4.1.10"
   }
 }

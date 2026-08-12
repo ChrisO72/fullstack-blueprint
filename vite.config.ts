@@ -1,7 +1,7 @@
 import { reactRouter } from "@react-router/dev/vite";
 import tailwindcss from "@tailwindcss/vite";
 import { fileURLToPath } from "node:url";
-import { defineConfig } from "vite";
+import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   publicDir: "web/public",
@@ -18,5 +18,11 @@ export default defineConfig({
       },
       { find: "~", replacement: fileURLToPath(new URL("./web", import.meta.url)) },
     ],
+  },
+  test: {
+    fileParallelism: false,
+    include: ["test/**/*.test.ts"],
+    maxWorkers: 1,
+    setupFiles: ["./test/setup.ts"],
   },
 });

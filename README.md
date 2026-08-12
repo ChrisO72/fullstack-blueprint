@@ -62,10 +62,17 @@ can omit the S3 endpoint and static credentials to use the regional endpoint and
 ## Checks
 
 ```bash
-npm run check                  # typecheck + lint + format (required pre-commit gate)
+npm test                       # critical auth and organization-boundary tests
+npm run check                  # typecheck + lint + format + tests (required pre-commit gate)
 ```
 
-`npm run check` runs `react-router typegen && tsc && eslint . && prettier --check .`. It must pass before any change is considered done.
+`npm run check` runs `react-router typegen && tsc && eslint . && prettier --check . && npm test`. It
+must pass before any change is considered done.
+
+Tests automatically start the local Postgres service and use a separate `blueprint_test` database
+inside the same container. The test schema is reset and migrated on every run; the development
+database, Redis, and S3 are untouched. Postgres remains running after the tests so an existing
+development session is not interrupted.
 
 ## Project layout
 
