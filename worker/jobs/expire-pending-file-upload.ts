@@ -14,7 +14,7 @@ export async function handleExpirePendingFileUploadJob(data: ExpirePendingFileUp
 
   if (claimedFile) {
     await deleteStoredFile(claimedFile.storageKey);
-    console.log(`[Worker] Expired pending file upload ${data.fileId}`);
+    console.log("[Worker] Expired pending file upload");
     return;
   }
 
@@ -23,5 +23,5 @@ export async function handleExpirePendingFileUploadJob(data: ExpirePendingFileUp
 
   // A retry may find the metadata already failed if object deletion previously threw.
   await deleteStoredFile(file.storageKey);
-  console.log(`[Worker] Removed object for failed file upload ${data.fileId}`);
+  console.log("[Worker] Removed object for failed file upload");
 }

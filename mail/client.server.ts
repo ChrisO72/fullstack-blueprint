@@ -25,7 +25,7 @@ export async function sendEmail({ to, subject, html, text }: Email) {
     );
   }
 
-  console.log(`[mail] sending email to ${to}`);
+  console.log("[mail] sending email");
 
   let response;
   try {
@@ -37,9 +37,9 @@ export async function sendEmail({ to, subject, html, text }: Email) {
       .text(text)
       .send();
   } catch (error) {
-    console.error(`[mail] Failed to send email to ${to}:`, error);
+    console.error("[mail] Failed to send email");
     throw error;
   }
 
-  console.log(`[mail] sent to ${to} — id: ${response.message_id}, status: ${response.status}`);
+  console.log(`[mail] sent — id: ${response.message_id}, status: ${response.status}`);
 }

@@ -4,7 +4,6 @@ import {
   handleExpirePendingFileUploadJob,
   type ExpirePendingFileUploadJobData,
 } from "./expire-pending-file-upload";
-import { exampleJobName, handleExampleJob, type ExampleJobData } from "./example";
 import {
   handleSendConfirmationEmailJob,
   sendConfirmationEmailJobName,
@@ -18,7 +17,6 @@ import {
 
 export type JobData = {
   [expirePendingFileUploadJobName]: ExpirePendingFileUploadJobData;
-  [exampleJobName]: ExampleJobData;
   [sendConfirmationEmailJobName]: SendConfirmationEmailJobData;
   [sendPasswordResetEmailJobName]: SendPasswordResetEmailJobData;
 };
@@ -30,15 +28,18 @@ type TypedJob = {
 }[JobName];
 
 export async function processJob(job: Job<JobData[JobName], void, JobName>) {
-  console.log(`[Worker] Processing ${job.name}`, job.data);
+  console.log("[Worker] Processing job", {
+    name: job.name,
+    id: job.id,
+    attempt: job.attemptsMade + 1,
+    queuedAt: new Date(job.timestamp).toISOString(),
+    processingStartedAt: job.processedOn ? new Date(job.processedOn).toISOString() : null,
+  });
 
   const typedJob = job as TypedJob;
   switch (typedJob.name) {
     case expirePendingFileUploadJobName:
       await handleExpirePendingFileUploadJob(typedJob.data);
-      break;
-    case exampleJobName:
-      await handleExampleJob(typedJob.data);
       break;
     case sendConfirmationEmailJobName:
       await handleSendConfirmationEmailJob(typedJob.data);

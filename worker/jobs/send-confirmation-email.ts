@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { sendConfirmationEmail } from "~/mail/confirmation.server";
 import { enqueueJob } from "../enqueue";
 
@@ -10,10 +11,12 @@ export type SendConfirmationEmailJobData = {
 };
 
 export function enqueueConfirmationEmailJob(data: SendConfirmationEmailJobData) {
+  const tokenDigest = createHash("sha256").update(data.token).digest("hex");
+
   return enqueueJob(sendConfirmationEmailJobName, data, {
     attempts: 3,
     backoff: { type: "exponential", delay: 1_000 },
-    jobId: `send-confirmation-email-${data.token}`,
+    jobId: `send-confirmation-email-${tokenDigest}`,
     removeOnComplete: 100,
     removeOnFail: 100,
   });

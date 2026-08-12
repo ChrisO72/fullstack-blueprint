@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { sendPasswordResetEmail } from "~/mail/password-reset.server";
 import { enqueueJob } from "../enqueue";
 
@@ -10,10 +11,12 @@ export type SendPasswordResetEmailJobData = {
 };
 
 export function enqueuePasswordResetEmailJob(data: SendPasswordResetEmailJobData) {
+  const tokenDigest = createHash("sha256").update(data.token).digest("hex");
+
   return enqueueJob(sendPasswordResetEmailJobName, data, {
     attempts: 3,
     backoff: { type: "exponential", delay: 1_000 },
-    jobId: `send-password-reset-email-${data.token}`,
+    jobId: `send-password-reset-email-${tokenDigest}`,
     removeOnComplete: 100,
     removeOnFail: 100,
   });
