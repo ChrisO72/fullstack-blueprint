@@ -93,14 +93,14 @@ export async function action({ request, context }: Route.ActionArgs) {
   return redirect(redirectUrl);
 }
 
-export default function ManageItemsPage({ loaderData }: Route.ComponentProps) {
+export default function ItemsPage({ loaderData }: Route.ComponentProps) {
   const { items, page, totalPages, totalCount, pageSize, pageSizeOptions } = loaderData;
 
   return (
     <div className="flex h-[calc(100vh-8rem)] flex-col lg:h-[calc(100vh-6rem)]">
       <div className="mb-6 flex shrink-0 items-start justify-between">
         <Heading>
-          Manage Items
+          Items
           {totalCount > 0 && (
             <span className="ml-2 font-normal text-zinc-500 dark:text-zinc-400">
               ({totalCount} total)
@@ -174,7 +174,7 @@ function ItemActions({ itemId }: { itemId: number }) {
         <EllipsisHorizontalIcon data-slot="icon" />
       </DropdownButton>
       <DropdownMenu>
-        <DropdownItem href={`/manage-items/${itemId}`}>View</DropdownItem>
+        <DropdownItem href={`/items/${itemId}`}>View</DropdownItem>
         <DropdownItem onClick={handleDelete}>Delete</DropdownItem>
       </DropdownMenu>
     </Dropdown>

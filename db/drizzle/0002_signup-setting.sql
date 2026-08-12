@@ -1,0 +1,1 @@
+ALTER TABLE "site_settings" ADD COLUMN "signup_enabled" boolean DEFAULT true NOT NULL;

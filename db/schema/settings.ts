@@ -4,6 +4,7 @@ import { timestamps } from "./shared";
 export const siteSettings = pgTable("site_settings", {
   id: integer().primaryKey().generatedAlwaysAsIdentity(),
   allowedDomains: text("allowed_domains").array().notNull().default([]),
+  signupEnabled: boolean("signup_enabled").notNull().default(true),
   requireMailConfirmation: boolean("require_mail_confirmation").notNull().default(false),
   ...timestamps,
 });

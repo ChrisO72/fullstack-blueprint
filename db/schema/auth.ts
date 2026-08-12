@@ -1,4 +1,4 @@
-import { index, integer, pgTable, timestamp, varchar } from "drizzle-orm/pg-core";
+import { index, integer, pgTable, timestamp, uniqueIndex, varchar } from "drizzle-orm/pg-core";
 import { organizations } from "./organizations";
 import { timestamps } from "./shared";
 
@@ -34,15 +34,33 @@ export const refreshTokens = pgTable(
   (table) => [index("refresh_tokens_user_id_idx").on(table.userId)],
 );
 
-export const emailConfirmationTokens = pgTable("email_confirmation_tokens", {
-  id: integer().primaryKey().generatedAlwaysAsIdentity(),
-  userId: integer("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  token: varchar({ length: 255 }).notNull().unique(),
-  expiresAt: timestamp("expires_at").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+export const emailConfirmationTokens = pgTable(
+  "email_confirmation_tokens",
+  {
+    id: integer().primaryKey().generatedAlwaysAsIdentity(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tokenHash: varchar("token_hash", { length: 64 }).notNull().unique(),
+    expiresAt: timestamp("expires_at").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [uniqueIndex("email_confirmation_tokens_user_id_unique").on(table.userId)],
+);
+
+export const passwordResetTokens = pgTable(
+  "password_reset_tokens",
+  {
+    id: integer().primaryKey().generatedAlwaysAsIdentity(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tokenHash: varchar("token_hash", { length: 64 }).notNull().unique(),
+    expiresAt: timestamp("expires_at").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [uniqueIndex("password_reset_tokens_user_id_unique").on(table.userId)],
+);
 
 export type SelectUser = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
@@ -50,3 +68,5 @@ export type SelectRefreshToken = typeof refreshTokens.$inferSelect;
 export type InsertRefreshToken = typeof refreshTokens.$inferInsert;
 export type SelectEmailConfirmationToken = typeof emailConfirmationTokens.$inferSelect;
 export type InsertEmailConfirmationToken = typeof emailConfirmationTokens.$inferInsert;
+export type SelectPasswordResetToken = typeof passwordResetTokens.$inferSelect;
+export type InsertPasswordResetToken = typeof passwordResetTokens.$inferInsert;

@@ -7,8 +7,23 @@ import {
   ScrollRestoration,
 } from "react-router";
 
+import { runWithLogContext } from "~/observability/logger.server";
 import type { Route } from "./+types/root";
+import { requestIdContext, resolveRequestId } from "./lib/request-context.server";
 import "./app.css";
+
+export const middleware: Route.MiddlewareFunction[] = [
+  async ({ request, context }, next) => {
+    const requestId = resolveRequestId(request);
+    context.set(requestIdContext, requestId);
+
+    return runWithLogContext({ requestId }, async () => {
+      const response = await next();
+      response.headers.set("X-Request-ID", requestId);
+      return response;
+    });
+  },
+];
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },

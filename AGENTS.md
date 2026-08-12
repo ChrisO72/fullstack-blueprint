@@ -1,10 +1,12 @@
 # AGENTS.md
 
-Read [README.md](README.md) first — it has the stack, commands, project layout, and conventions for both humans and agents. Area-specific patterns and templates live in the README of each subdirectory: [web/README.md](web/README.md), [worker/README.md](worker/README.md), [db/README.md](db/README.md), [db/repositories/README.md](db/repositories/README.md).
+Read [README.md](README.md) first — it has the stack, commands, project layout, and conventions for both humans and agents. Area-specific patterns and templates live in the README of each subdirectory: [web/README.md](web/README.md), [worker/README.md](worker/README.md), [mail/README.md](mail/README.md), [db/README.md](db/README.md), [db/repositories/README.md](db/repositories/README.md).
 
 ## Required pre-finish gate
 
-`npm run check` must pass before any change is considered done. It runs `react-router typegen && tsc && eslint . && prettier --check .`.
+`npm run check` must pass before any change is considered done.
+
+Use this gate as the only verification step. Do not perform manual browser or UI testing unless the user explicitly requests it.
 
 ## Don'ts
 

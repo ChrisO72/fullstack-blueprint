@@ -11,7 +11,9 @@ export async function getSiteSettings(): Promise<SelectSiteSettings> {
 }
 
 export async function updateSiteSettings(
-  data: Partial<Pick<SelectSiteSettings, "allowedDomains" | "requireMailConfirmation">>,
+  data: Partial<
+    Pick<SelectSiteSettings, "allowedDomains" | "signupEnabled" | "requireMailConfirmation">
+  >,
 ) {
   const settings = await getSiteSettings();
   const [updated] = await db

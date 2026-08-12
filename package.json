@@ -1,6 +1,8 @@
 {
   "name": "fullstack-blueprint",
+  "version": "1.0.0",
   "private": true,
+  "author": "Chris Opon-Nimoh",
   "type": "module",
   "engines": {
     "node": ">=24"
@@ -19,14 +21,19 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "typecheck": "react-router typegen && tsc",
-    "check": "react-router typegen && tsc && eslint . && prettier --check .",
+    "lint": "eslint .",
+    "check": "npm run format && npm run typecheck && npm run lint && npm test",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "docker:wipe": "docker compose down -v",
     "format": "npx prettier . --write",
-    "format:check": "npx prettier . --check"
+    "format:check": "npx prettier . --check",
+    "test": "tsx test/run.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1101.0",
+    "@aws-sdk/s3-presigned-post": "^3.1101.0",
+    "@aws-sdk/s3-request-presigner": "^3.1101.0",
     "@headlessui/react": "^2.2.10",
     "@heroicons/react": "^2.2.0",
     "@react-router/node": "^8.3.0",
@@ -43,6 +50,7 @@
     "motion": "^12.43.0",
     "node-cron": "^4.6.0",
     "pg": "^8.22.0",
+    "pino": "^10.3.1",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-router": "^8.3.0",
@@ -65,12 +73,14 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.3",
     "globals": "^17.8.0",
+    "pino-pretty": "^13.1.3",
     "prettier": "^3.9.6",
     "prettier-plugin-tailwindcss": "^0.8.1",
     "tailwindcss": "^4.3.3",
     "tsx": "^4.23.1",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.65.0",
-    "vite": "^8.2.0"
+    "vite": "^8.2.0",
+    "vitest": "^4.1.10"
   }
 }

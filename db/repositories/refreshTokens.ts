@@ -16,6 +16,14 @@ export async function findRefreshTokenByHash(tokenHash: string) {
   return row ?? null;
 }
 
+export async function consumeRefreshTokenByHash(tokenHash: string) {
+  const [row] = await db
+    .delete(refreshTokens)
+    .where(and(eq(refreshTokens.tokenHash, tokenHash), gt(refreshTokens.expiresAt, new Date())))
+    .returning();
+  return row ?? null;
+}
+
 export async function deleteRefreshTokenByHash(tokenHash: string) {
   await db.delete(refreshTokens).where(eq(refreshTokens.tokenHash, tokenHash));
 }

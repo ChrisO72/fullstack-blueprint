@@ -1,8 +1,13 @@
 import { env } from "~/env.server";
-import { CONFIRMATION_TOKEN_EXPIRY_HOURS } from "../auth/email-confirmation.server";
 import { sendEmail } from "./client.server";
 
-export async function sendConfirmationEmail(to: string, token: string) {
+type ConfirmationEmail = {
+  to: string;
+  token: string;
+  expiresInHours: number;
+};
+
+export async function sendConfirmationEmail({ to, token, expiresInHours }: ConfirmationEmail) {
   const confirmUrl = `${env.APP_URL}/confirm-email?token=${token}`;
 
   await sendEmail({
@@ -12,8 +17,8 @@ export async function sendConfirmationEmail(to: string, token: string) {
       "<h2>Confirm your email</h2>",
       "<p>Click the link below to confirm your email address:</p>",
       `<p><a href="${confirmUrl}">${confirmUrl}</a></p>`,
-      `<p>This link expires in ${CONFIRMATION_TOKEN_EXPIRY_HOURS} hours.</p>`,
+      `<p>This link expires in ${expiresInHours} hours.</p>`,
     ].join("\n"),
-    text: `Confirm your email address: ${confirmUrl}\n\nThis link expires in ${CONFIRMATION_TOKEN_EXPIRY_HOURS} hours.`,
+    text: `Confirm your email address: ${confirmUrl}\n\nThis link expires in ${expiresInHours} hours.`,
   });
 }
