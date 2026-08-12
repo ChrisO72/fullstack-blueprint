@@ -1,5 +1,6 @@
 import type { Route } from "./+types/users";
 import { listUsers, softDeleteUser, updateUser } from "~/db/repositories/users";
+import { getOrganizationById, listOrganizations } from "~/db/repositories/organizations";
 import { requireAdmin } from "~/lib/session.server";
 import { Heading } from "~/components/ui-kit/heading";
 import {
@@ -16,6 +17,7 @@ import { EllipsisHorizontalIcon } from "@heroicons/react/16/solid";
 import { z } from "zod";
 import { Select } from "~/components/ui-kit/select";
 import { parseForm } from "~/lib/form";
+import { Combobox, ComboboxLabel, ComboboxOption } from "~/components/ui-kit/combobox";
 
 const ROLES = ["admin", "user", "viewer"] as const;
 
@@ -28,10 +30,17 @@ const updateRoleSchema = z.object({
   role: z.enum(ROLES, { message: "Invalid role" }),
 });
 
+const updateOrganizationSchema = z.object({
+  id: z.coerce.number({ message: "Invalid user ID" }).positive("Invalid user ID"),
+  organizationId: z.coerce
+    .number({ message: "Invalid organization ID" })
+    .positive("Invalid organization ID"),
+});
+
 export async function loader({ context }: Route.LoaderArgs) {
   const { user: currentUser } = requireAdmin(context);
-  const users = await listUsers();
-  return { users, currentUserId: currentUser.id };
+  const [users, organizations] = await Promise.all([listUsers(), listOrganizations()]);
+  return { users, organizations, currentUserId: currentUser.id };
 }
 
 export async function action({ request, context }: Route.ActionArgs) {
@@ -50,12 +59,25 @@ export async function action({ request, context }: Route.ActionArgs) {
   }
 
   if (request.method === "PATCH") {
-    const { data, fieldErrors } = parseForm(formData, updateRoleSchema);
-    if (fieldErrors) return { fieldErrors };
-    if (data.id === user.id) {
-      return { fieldErrors: { id: ["Cannot change your own role"] } };
+    if (formData.has("role")) {
+      const { data, fieldErrors } = parseForm(formData, updateRoleSchema);
+      if (fieldErrors) return { fieldErrors };
+      if (data.id === user.id) {
+        return { fieldErrors: { id: ["Cannot change your own role"] } };
+      }
+      await updateUser(data.id, { role: data.role });
+      return redirect(".");
     }
-    await updateUser(data.id, { role: data.role });
+
+    const { data, fieldErrors } = parseForm(formData, updateOrganizationSchema);
+    if (fieldErrors) return { fieldErrors };
+
+    const organization = await getOrganizationById(data.organizationId);
+    if (!organization) {
+      return { fieldErrors: { organizationId: ["Organization not found"] } };
+    }
+
+    await updateUser(data.id, { organizationId: data.organizationId });
     return redirect(".");
   }
 
@@ -63,7 +85,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 }
 
 export default function AdminUsersPage({ loaderData }: Route.ComponentProps) {
-  const { users, currentUserId } = loaderData;
+  const { users, organizations, currentUserId } = loaderData;
 
   return (
     <div>
@@ -90,6 +112,7 @@ export default function AdminUsersPage({ loaderData }: Route.ComponentProps) {
                 <TableHeader>ID</TableHeader>
                 <TableHeader>Email</TableHeader>
                 <TableHeader>Name</TableHeader>
+                <TableHeader>Organization</TableHeader>
                 <TableHeader>Role</TableHeader>
                 <TableHeader>Created</TableHeader>
                 <TableHeader>Actions</TableHeader>
@@ -102,6 +125,13 @@ export default function AdminUsersPage({ loaderData }: Route.ComponentProps) {
                   <TableCell>{u.email}</TableCell>
                   <TableCell>
                     {[u.firstName, u.lastName].filter(Boolean).join(" ") || "-"}
+                  </TableCell>
+                  <TableCell>
+                    <OrganizationCombobox
+                      userId={u.id}
+                      currentOrganizationId={u.organizationId}
+                      organizations={organizations}
+                    />
                   </TableCell>
                   <TableCell>
                     <RoleSelect
@@ -121,6 +151,50 @@ export default function AdminUsersPage({ loaderData }: Route.ComponentProps) {
         </div>
       )}
     </div>
+  );
+}
+
+function OrganizationCombobox({
+  userId,
+  currentOrganizationId,
+  organizations,
+}: {
+  userId: number;
+  currentOrganizationId: number;
+  organizations: Route.ComponentProps["loaderData"]["organizations"];
+}) {
+  const fetcher = useFetcher();
+  const optimisticOrganizationId = fetcher.formData
+    ? Number(fetcher.formData.get("organizationId"))
+    : currentOrganizationId;
+  const selectedOrganization =
+    organizations.find((organization) => organization.id === optimisticOrganizationId) ?? null;
+
+  return (
+    <Combobox
+      options={organizations}
+      value={selectedOrganization}
+      by="id"
+      displayValue={(organization) => organization?.name}
+      filter={(organization, query) =>
+        organization?.name.toLowerCase().includes(query.toLowerCase()) ?? false
+      }
+      onChange={(organization) => {
+        if (!organization || organization.id === currentOrganizationId) return;
+        fetcher.submit(
+          { id: userId.toString(), organizationId: organization.id.toString() },
+          { method: "PATCH" },
+        );
+      }}
+      aria-label="Organization"
+      className="min-w-48"
+    >
+      {(organization) => (
+        <ComboboxOption value={organization}>
+          <ComboboxLabel>{organization.name}</ComboboxLabel>
+        </ComboboxOption>
+      )}
+    </Combobox>
   );
 }
 

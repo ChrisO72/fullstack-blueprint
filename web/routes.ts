@@ -11,14 +11,14 @@ export default [
   // Protected routes
   layout("routes/layout.tsx", [
     index("routes/home.tsx"),
-    route("do-things", "routes/do-things/index.tsx"),
     route("files", "routes/files/index.tsx"),
     route("files/:fileId/download", "routes/files/download.ts"),
-    route("manage-items", "routes/manage-items/index.tsx"),
-    route("manage-items/:item", "routes/manage-items/item.tsx"),
+    route("items", "routes/items/index.tsx"),
+    route("items/:item", "routes/items/item.tsx"),
     layout("routes/admin/layout.tsx", [
       route("admin", "routes/admin/index.tsx"),
       route("admin/users", "routes/admin/users.tsx"),
+      route("admin/organizations", "routes/admin/organizations.tsx"),
     ]),
   ]),
 ] satisfies RouteConfig;

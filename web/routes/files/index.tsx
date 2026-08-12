@@ -37,7 +37,7 @@ import {
   PENDING_FILE_UPLOAD_TTL_MS,
 } from "~/worker/jobs/expire-pending-file-upload";
 import type { Route } from "./+types/index";
-import { Pagination } from "../manage-items/Pagination";
+import { Pagination } from "../items/Pagination";
 import { UploadFileDialog } from "./UploadFileDialog";
 
 const prepareUploadSchema = z.object({

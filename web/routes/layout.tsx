@@ -61,14 +61,11 @@ export default function Layout({ loaderData }: Route.ComponentProps) {
               <SidebarItem href="/" current={pathname === "/"}>
                 <SidebarLabel>Dashboard</SidebarLabel>
               </SidebarItem>
-              <SidebarItem href="/do-things" current={pathname.startsWith("/do-things")}>
-                <SidebarLabel>Do things</SidebarLabel>
-              </SidebarItem>
               <SidebarItem href="/files" current={pathname.startsWith("/files")}>
                 <SidebarLabel>Files</SidebarLabel>
               </SidebarItem>
-              <SidebarItem href="/manage-items" current={pathname.startsWith("/manage-items")}>
-                <SidebarLabel>Manage Items</SidebarLabel>
+              <SidebarItem href="/items" current={pathname.startsWith("/items")}>
+                <SidebarLabel>Items</SidebarLabel>
               </SidebarItem>
               {user.role === "admin" && (
                 <SidebarItem href="/admin" current={pathname.startsWith("/admin")}>

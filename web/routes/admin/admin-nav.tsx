@@ -4,6 +4,7 @@ import { Navbar, NavbarItem, NavbarSection } from "~/components/ui-kit/navbar";
 const tabs = [
   { name: "Settings", href: "/admin" },
   { name: "Users", href: "/admin/users" },
+  { name: "Organizations", href: "/admin/organizations" },
 ] as const;
 
 export function AdminNav() {

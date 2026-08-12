@@ -1,6 +1,8 @@
 {
   "name": "fullstack-blueprint",
+  "version": "0.1.0",
   "private": true,
+  "author": "Chris Opon-Nimoh",
   "type": "module",
   "engines": {
     "node": ">=24"
