@@ -34,15 +34,19 @@ export const refreshTokens = pgTable(
   (table) => [index("refresh_tokens_user_id_idx").on(table.userId)],
 );
 
-export const emailConfirmationTokens = pgTable("email_confirmation_tokens", {
-  id: integer().primaryKey().generatedAlwaysAsIdentity(),
-  userId: integer("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  token: varchar({ length: 255 }).notNull().unique(),
-  expiresAt: timestamp("expires_at").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+export const emailConfirmationTokens = pgTable(
+  "email_confirmation_tokens",
+  {
+    id: integer().primaryKey().generatedAlwaysAsIdentity(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tokenHash: varchar("token_hash", { length: 64 }).notNull().unique(),
+    expiresAt: timestamp("expires_at").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [uniqueIndex("email_confirmation_tokens_user_id_unique").on(table.userId)],
+);
 
 export const passwordResetTokens = pgTable(
   "password_reset_tokens",

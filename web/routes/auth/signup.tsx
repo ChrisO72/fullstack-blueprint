@@ -8,12 +8,12 @@ import { Field, Label } from "~/components/ui-kit/fieldset";
 import { Heading } from "~/components/ui-kit/heading";
 import { Input } from "~/components/ui-kit/input";
 import { Strong, Text, TextLink } from "~/components/ui-kit/text";
-import { deleteEmailConfirmationToken } from "~/db/repositories/emailConfirmationTokens";
 import { getSiteSettings } from "~/db/repositories/settings";
 import { getUserByEmail } from "~/db/repositories/users";
 import {
   CONFIRMATION_TOKEN_EXPIRY_HOURS,
   createEmailConfirmationToken,
+  deleteEmailConfirmationToken,
 } from "~/lib/auth/email-confirmation.server";
 import { createUserWithPassword } from "~/lib/auth/registration.server";
 import { createTokens, verifyAccessToken } from "~/lib/auth/tokens.server";

@@ -5,14 +5,12 @@ import { Button } from "~/components/ui-kit/button";
 import { FormError } from "~/components/form-error";
 import { Heading } from "~/components/ui-kit/heading";
 import { Strong, Text, TextLink } from "~/components/ui-kit/text";
+import { getLatestEmailConfirmationTokenCreatedAt } from "~/db/repositories/emailConfirmationTokens";
 import { getUserByEmail } from "~/db/repositories/users";
-import {
-  deleteEmailConfirmationToken,
-  getLatestEmailConfirmationTokenCreatedAt,
-} from "~/db/repositories/emailConfirmationTokens";
 import {
   CONFIRMATION_TOKEN_EXPIRY_HOURS,
   createEmailConfirmationToken,
+  deleteEmailConfirmationToken,
 } from "~/lib/auth/email-confirmation.server";
 import { verifyAccessToken } from "~/lib/auth/tokens.server";
 import type { ActionData } from "~/lib/form";
