@@ -6,6 +6,7 @@ import { env } from "~/env.server";
 import { storageClient } from "./client.server";
 
 export const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
+export const isFileStorageEnabled = Boolean(env.S3_BUCKET);
 const SIGNED_URL_TTL_SECONDS = 5 * 60;
 
 export function createStorageKey(organizationId: number) {
@@ -18,7 +19,7 @@ export async function createFileUpload(
   expectedSize: number,
 ) {
   return createPresignedPost(storageClient, {
-    Bucket: env.S3_BUCKET,
+    Bucket: getStorageBucket(),
     Key: storageKey,
     Expires: SIGNED_URL_TTL_SECONDS,
     Fields: {
@@ -34,7 +35,7 @@ export async function createFileUpload(
 export async function inspectStoredFile(storageKey: string) {
   const object = await storageClient.send(
     new HeadObjectCommand({
-      Bucket: env.S3_BUCKET,
+      Bucket: getStorageBucket(),
       Key: storageKey,
     }),
   );
@@ -51,7 +52,7 @@ export async function createFileDownloadUrl(storageKey: string, filename: string
   return getSignedUrl(
     storageClient,
     new GetObjectCommand({
-      Bucket: env.S3_BUCKET,
+      Bucket: getStorageBucket(),
       Key: storageKey,
       ResponseContentDisposition: contentDisposition,
       ResponseContentType: "application/octet-stream",
@@ -60,13 +61,34 @@ export async function createFileDownloadUrl(storageKey: string, filename: string
   );
 }
 
+export async function createFilePreviewUrl(storageKey: string, contentType: string) {
+  return getSignedUrl(
+    storageClient,
+    new GetObjectCommand({
+      Bucket: getStorageBucket(),
+      Key: storageKey,
+      ResponseContentDisposition: "inline",
+      ResponseContentType: contentType,
+    }),
+    { expiresIn: SIGNED_URL_TTL_SECONDS },
+  );
+}
+
 export async function deleteStoredFile(storageKey: string) {
   await storageClient.send(
     new DeleteObjectCommand({
-      Bucket: env.S3_BUCKET,
+      Bucket: getStorageBucket(),
       Key: storageKey,
     }),
   );
+}
+
+function getStorageBucket() {
+  if (!env.S3_BUCKET) {
+    throw new Error("File storage is not configured");
+  }
+
+  return env.S3_BUCKET;
 }
 
 function createAttachmentDisposition(filename: string) {

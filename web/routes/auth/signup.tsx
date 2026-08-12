@@ -14,6 +14,7 @@ import { createEmailConfirmationToken } from "~/lib/auth/email-confirmation.serv
 import { createUserWithPassword } from "~/lib/auth/registration.server";
 import { createTokens, verifyAccessToken } from "~/lib/auth/tokens.server";
 import { parseForm, type ActionData } from "~/lib/form";
+import { isEmailConfigured } from "~/lib/mail/client.server";
 import { readAccessTokenCookie, setAuthCookies } from "~/lib/session.server";
 import { sendConfirmationEmail } from "~/lib/mail/confirmation.server";
 import type { Route } from "./+types/signup";
@@ -29,17 +30,22 @@ export async function loader({ request }: Route.LoaderArgs) {
   if (accessToken && verifyAccessToken(accessToken)) {
     return redirect("/");
   }
-  return null;
+
+  const settings = await getSiteSettings();
+  return { signupEnabled: settings.signupEnabled };
 }
 
 export async function action({ request }: Route.ActionArgs): Promise<ActionData | Response> {
+  const settings = await getSiteSettings();
+  if (!settings.signupEnabled) {
+    return { formError: "Signup is currently disabled." };
+  }
+
   const formData = await request.formData();
   const { data, fieldErrors } = parseForm(formData, signupSchema);
   if (fieldErrors) return { fieldErrors };
 
   const { email, firstname, password } = data;
-
-  const settings = await getSiteSettings();
 
   if (settings.allowedDomains.length > 0) {
     const domain = email.split("@")[1]?.toLowerCase();
@@ -51,7 +57,7 @@ export async function action({ request }: Route.ActionArgs): Promise<ActionData 
   const existing = await getUserByEmail(email);
 
   if (existing) {
-    if (settings.requireMailConfirmation && !existing.emailConfirmedAt) {
+    if (isEmailConfigured && settings.requireMailConfirmation && !existing.emailConfirmedAt) {
       return redirect(`/check-email?email=${encodeURIComponent(email)}`);
     }
     return { fieldErrors: { email: ["An account with this email already exists"] } };
@@ -59,7 +65,7 @@ export async function action({ request }: Route.ActionArgs): Promise<ActionData 
 
   const user = await createUserWithPassword(email, password, firstname);
 
-  if (settings.requireMailConfirmation) {
+  if (isEmailConfigured && settings.requireMailConfirmation) {
     const token = await createEmailConfirmationToken(user.id);
     try {
       await sendConfirmationEmail(email, token);
@@ -79,10 +85,27 @@ export async function action({ request }: Route.ActionArgs): Promise<ActionData 
   });
 }
 
-export default function SignupPage() {
+export default function SignupPage({ loaderData }: Route.ComponentProps) {
   const actionData = useActionData<ActionData>();
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";
+
+  if (!loaderData.signupEnabled) {
+    return (
+      <AuthLayout>
+        <div className="grid w-full max-w-sm grid-cols-1 gap-8">
+          <Heading>Signup is disabled</Heading>
+          <Text>New accounts cannot be created at this time.</Text>
+          <Text>
+            Already have an account?{" "}
+            <TextLink href="/login">
+              <Strong>Sign in</Strong>
+            </TextLink>
+          </Text>
+        </div>
+      </AuthLayout>
+    );
+  }
 
   return (
     <AuthLayout>

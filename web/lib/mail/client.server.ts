@@ -1,11 +1,15 @@
 import { Lettermint } from "lettermint";
 import { env } from "~/env.server";
 
-const lettermint = new Lettermint({
-  apiToken: env.LETTERMINT_API_KEY,
-});
+const lettermint = env.LETTERMINT_API_KEY
+  ? new Lettermint({
+      apiToken: env.LETTERMINT_API_KEY,
+    })
+  : null;
 
-const from = env.MAIL_FROM;
+const from = env.LETTERMINT_MAIL_FROM;
+
+export const isEmailConfigured = lettermint !== null && Boolean(from);
 
 type Email = {
   to: string;
@@ -15,6 +19,10 @@ type Email = {
 };
 
 export async function sendEmail({ to, subject, html, text }: Email) {
+  if (!lettermint || !from) {
+    throw new Error("Email is not configured");
+  }
+
   console.log(`[mail] sending email to ${to}`);
 
   let response;

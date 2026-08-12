@@ -3,6 +3,9 @@
 Private S3 file storage shared by the web app and worker. PostgreSQL holds organization-scoped
 metadata; S3 holds file bytes.
 
+All `S3_*` environment variables are optional. When `S3_BUCKET` is unset, the application still
+starts and the Files page displays setup guidance instead of file controls.
+
 ## Local development
 
 `npm run docker:up` starts MinIO and creates the private `blueprint-files` bucket automatically.

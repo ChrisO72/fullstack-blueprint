@@ -13,6 +13,7 @@ export default [
     index("routes/home.tsx"),
     route("files", "routes/files/index.tsx"),
     route("files/:fileId/download", "routes/files/download.ts"),
+    route("files/:fileId/preview", "routes/files/preview.ts"),
     route("items", "routes/items/index.tsx"),
     route("items/:item", "routes/items/item.tsx"),
     layout("routes/admin/layout.tsx", [

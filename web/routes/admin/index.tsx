@@ -12,16 +12,18 @@ import { Switch, SwitchField } from "~/components/ui-kit/switch";
 import { Badge } from "~/components/ui-kit/badge";
 import { XMarkIcon } from "@heroicons/react/16/solid";
 import type { ActionData, FieldErrors } from "~/lib/form";
+import { isEmailConfigured } from "~/lib/mail/client.server";
 
 const settingsSchema = z.object({
   allowedDomains: z.array(z.string().trim().min(1)).default([]),
+  signupEnabled: z.boolean().default(false),
   requireMailConfirmation: z.boolean().default(false),
 });
 
 export async function loader({ context }: Route.LoaderArgs) {
   requireAdmin(context);
   const settings = await getSiteSettings();
-  return { settings };
+  return { settings, isEmailConfigured };
 }
 
 export async function action({ request, context }: Route.ActionArgs): Promise<ActionData> {
@@ -30,9 +32,15 @@ export async function action({ request, context }: Route.ActionArgs): Promise<Ac
   const formData = await request.formData();
 
   const domains = formData.getAll("allowedDomains").map((v) => String(v));
-  const requireMailConfirmation = formData.get("requireMailConfirmation") === "true";
+  const signupEnabled = formData.get("signupEnabled") === "true";
+  const requireMailConfirmation =
+    isEmailConfigured && formData.get("requireMailConfirmation") === "true";
 
-  const result = settingsSchema.safeParse({ allowedDomains: domains, requireMailConfirmation });
+  const result = settingsSchema.safeParse({
+    allowedDomains: domains,
+    signupEnabled,
+    requireMailConfirmation,
+  });
   if (!result.success) {
     return { fieldErrors: z.flattenError(result.error).fieldErrors as FieldErrors };
   }
@@ -42,12 +50,15 @@ export async function action({ request, context }: Route.ActionArgs): Promise<Ac
 }
 
 export default function AdminSettingsPage({ loaderData }: Route.ComponentProps) {
-  const { settings } = loaderData;
+  const { settings, isEmailConfigured } = loaderData;
   const fetcher = useFetcher<typeof action>();
 
   const [domains, setDomains] = useState<string[]>(settings.allowedDomains ?? []);
   const [domainInput, setDomainInput] = useState("");
-  const [mailConfirmation, setMailConfirmation] = useState(settings.requireMailConfirmation);
+  const [signupEnabled, setSignupEnabled] = useState(settings.signupEnabled);
+  const [mailConfirmation, setMailConfirmation] = useState(
+    isEmailConfigured && settings.requireMailConfirmation,
+  );
 
   const addDomain = () => {
     const value = domainInput.trim().toLowerCase();
@@ -120,15 +131,33 @@ export default function AdminSettingsPage({ loaderData }: Route.ComponentProps) 
             </Field>
 
             <SwitchField>
+              <Label>Enable signup</Label>
+              <Description>Allow new users to create an account.</Description>
+              <Switch
+                name="signupEnabled"
+                checked={signupEnabled}
+                onChange={setSignupEnabled}
+                color="dark/zinc"
+              />
+              <input type="hidden" name="signupEnabled" value={String(signupEnabled)} />
+            </SwitchField>
+
+            <SwitchField>
               <Label>Require mail confirmation</Label>
               <Description>
                 New users must confirm their email address before they can sign in.
+                {!isEmailConfigured && (
+                  <span className="mt-1 block">
+                    Add Lettermint environment variables to enable email verification.
+                  </span>
+                )}
               </Description>
               <Switch
                 name="requireMailConfirmation"
                 checked={mailConfirmation}
                 onChange={setMailConfirmation}
                 color="dark/zinc"
+                disabled={!isEmailConfigured}
               />
               <input
                 type="hidden"

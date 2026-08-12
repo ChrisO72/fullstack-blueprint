@@ -12,6 +12,7 @@ import { getSiteSettings } from "~/db/repositories/settings";
 import { validateLogin } from "~/lib/auth/password.server";
 import { createTokens, verifyAccessToken } from "~/lib/auth/tokens.server";
 import { parseForm, type ActionData } from "~/lib/form";
+import { isEmailConfigured } from "~/lib/mail/client.server";
 import { readAccessTokenCookie, setAuthCookies } from "~/lib/session.server";
 import type { Route } from "./+types/login";
 
@@ -41,7 +42,7 @@ export async function action({ request }: Route.ActionArgs): Promise<ActionData 
   }
 
   const settings = await getSiteSettings();
-  if (settings.requireMailConfirmation && !user.emailConfirmedAt) {
+  if (isEmailConfigured && settings.requireMailConfirmation && !user.emailConfirmedAt) {
     return redirect(`/check-email?email=${encodeURIComponent(email)}`);
   }
 

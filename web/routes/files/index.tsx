@@ -1,4 +1,5 @@
 import { EllipsisHorizontalIcon } from "@heroicons/react/16/solid";
+import { useState } from "react";
 import { redirect, useActionData, useSubmit } from "react-router";
 import { z } from "zod";
 import { FormError } from "~/components/form-error";
@@ -29,6 +30,7 @@ import {
   createStorageKey,
   deleteStoredFile,
   inspectStoredFile,
+  isFileStorageEnabled,
   MAX_UPLOAD_BYTES,
 } from "~/storage/objects.server";
 import { enqueueJob } from "~/worker/enqueue";
@@ -85,12 +87,25 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     ? requestedPageSize
     : DEFAULT_PAGE_SIZE;
 
+  if (!isFileStorageEnabled) {
+    return {
+      storageEnabled: false,
+      files: [],
+      page,
+      pageSize,
+      pageSizeOptions: PAGE_SIZE_OPTIONS,
+      totalCount: 0,
+      totalPages: 0,
+    };
+  }
+
   const [files, totalCount] = await Promise.all([
     listFilesByOrgPaginated(user.organizationId, page, pageSize),
     countFilesByOrg(user.organizationId),
   ]);
 
   return {
+    storageEnabled: true,
     files,
     page,
     pageSize,
@@ -105,6 +120,11 @@ export async function action({
   context,
 }: Route.ActionArgs): Promise<FileActionData | Response> {
   const user = getAuthenticatedUser(context);
+
+  if (!isFileStorageEnabled) {
+    return { formError: "Add S3 environment variables to enable files." };
+  }
+
   const formData = await request.formData();
 
   if (request.method === "DELETE") {
@@ -227,6 +247,22 @@ export async function action({
 }
 
 export default function FilesPage({ loaderData }: Route.ComponentProps) {
+  if (!loaderData.storageEnabled) {
+    return (
+      <div>
+        <Heading>Files</Heading>
+        <div className="mt-6 rounded-lg bg-zinc-50 px-6 py-12 text-center dark:bg-zinc-900">
+          <p className="font-medium text-zinc-950 dark:text-white">
+            File storage is not configured.
+          </p>
+          <p className="mt-2 text-zinc-500 dark:text-zinc-400">
+            Add S3 environment variables to enable files.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   const { files, page, pageSize, pageSizeOptions, totalCount, totalPages } = loaderData;
   const actionData = useActionData<FileActionData>();
 
@@ -269,7 +305,17 @@ export default function FilesPage({ loaderData }: Route.ComponentProps) {
               <TableBody>
                 {files.map((file) => (
                   <TableRow key={file.id}>
-                    <TableCell className="font-medium">{file.originalFilename}</TableCell>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-3">
+                        <FileThumbnail
+                          fileId={file.id}
+                          filename={file.originalFilename}
+                          isImage={file.contentType.startsWith("image/")}
+                          ready={file.status === "ready"}
+                        />
+                        <span>{file.originalFilename}</span>
+                      </div>
+                    </TableCell>
                     <TableCell>{file.contentType}</TableCell>
                     <TableCell>{formatFileSize(file.actualSize ?? file.expectedSize)}</TableCell>
                     <TableCell>
@@ -296,6 +342,43 @@ export default function FilesPage({ loaderData }: Route.ComponentProps) {
         </>
       )}
     </div>
+  );
+}
+
+function FileThumbnail({
+  fileId,
+  filename,
+  isImage,
+  ready,
+}: {
+  fileId: number;
+  filename: string;
+  isImage: boolean;
+  ready: boolean;
+}) {
+  const [imageFailed, setImageFailed] = useState(false);
+
+  if (isImage && ready && !imageFailed) {
+    return (
+      <img
+        src={`/files/${fileId}/preview`}
+        alt=""
+        className="size-10 shrink-0 rounded-md bg-zinc-100 object-cover dark:bg-zinc-800"
+        loading="lazy"
+        onError={() => setImageFailed(true)}
+      />
+    );
+  }
+
+  const extension = getFileExtension(filename);
+  return (
+    <span
+      aria-hidden="true"
+      title={extension}
+      className="flex size-10 shrink-0 items-center justify-center rounded-md bg-zinc-100 px-1 text-[10px] font-semibold text-zinc-500 uppercase dark:bg-zinc-800 dark:text-zinc-400"
+    >
+      <span className="max-w-full truncate">{extension}</span>
+    </span>
   );
 }
 
@@ -330,4 +413,10 @@ function formatFileSize(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function getFileExtension(filename: string) {
+  const lastDot = filename.lastIndexOf(".");
+  if (lastDot <= 0 || lastDot === filename.length - 1) return "FILE";
+  return filename.slice(lastDot).toLowerCase();
 }

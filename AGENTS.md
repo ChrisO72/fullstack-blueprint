@@ -4,7 +4,9 @@ Read [README.md](README.md) first — it has the stack, commands, project layout
 
 ## Required pre-finish gate
 
-`npm run check` must pass before any change is considered done. It runs `react-router typegen && tsc && eslint . && prettier --check .`.
+`npm run check` must pass before any change is considered done.
+
+Use this gate as the only verification step. Do not perform manual browser or UI testing unless the user explicitly requests it.
 
 ## Don'ts
 
