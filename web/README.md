@@ -78,6 +78,16 @@ Server-only code lives in `*.server.ts` and is never imported from client compon
 - [`../mail/`](../mail/) — shared outbound mail transport and one server module per email type, delivered through worker jobs.
 - [`../storage/`](../storage/) — shared S3 client and object operations used by web and worker code.
 
+## Auth rate limiting
+
+Public auth actions use Redis-backed fixed windows shared by every web instance:
+
+- Login: 10 requests per submitted email every 15 minutes.
+- Signup: 5 requests per submitted email per hour.
+- Password reset and confirmation resend: 3 requests per submitted email per hour.
+
+Counters use HMAC-pseudonymized submitted emails, expire with their window, return `429` with `Retry-After` when exceeded, and fail open if Redis is unavailable.
+
 ## Private file uploads
 
 The protected `/files` example uses a prepare/upload/confirm flow:

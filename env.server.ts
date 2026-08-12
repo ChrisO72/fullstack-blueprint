@@ -6,6 +6,9 @@ const envSchema = z
     NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
     DATABASE_URL: z.url(),
     REDIS_URL: z.url(),
+    RATE_LIMIT_KEY_SECRET: z
+      .string()
+      .min(32, "RATE_LIMIT_KEY_SECRET must be at least 32 characters"),
     JWT_SECRET: z.string().min(32, "JWT_SECRET must be at least 32 characters"),
     REFRESH_SECRET: z.string().min(32, "REFRESH_SECRET must be at least 32 characters"),
     LETTERMINT_API_KEY: z.string().min(1).optional(),

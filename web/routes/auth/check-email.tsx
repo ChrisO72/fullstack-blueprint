@@ -14,6 +14,7 @@ import {
 } from "~/lib/auth/email-confirmation.server";
 import { verifyAccessToken } from "~/lib/auth/tokens.server";
 import type { ActionData } from "~/lib/form";
+import { checkAuthRateLimit, createRateLimitResponse } from "~/lib/rate-limit.server";
 import { isEmailConfigured } from "~/mail/client.server";
 import { readAccessTokenCookie } from "~/lib/session.server";
 import { enqueueConfirmationEmailJob } from "~/worker/jobs/send-confirmation-email";
@@ -22,6 +23,10 @@ import type { Route } from "./+types/check-email";
 type ResendActionData = ActionData & { resentAt?: string };
 
 const RESEND_COOLDOWN_MS = 5 * 60 * 1000;
+
+function acceptedResend(): ResendActionData {
+  return { resentAt: new Date().toISOString() };
+}
 
 export async function loader({ request }: Route.LoaderArgs) {
   const accessToken = await readAccessTokenCookie(request);
@@ -44,7 +49,7 @@ export async function loader({ request }: Route.LoaderArgs) {
   return { email, lastSentAt: lastSentAt?.toISOString() ?? null };
 }
 
-export async function action({ request }: Route.ActionArgs): Promise<ResendActionData> {
+export async function action({ request }: Route.ActionArgs): Promise<ResendActionData | Response> {
   if (!isEmailConfigured) {
     return {
       formError:
@@ -56,14 +61,17 @@ export async function action({ request }: Route.ActionArgs): Promise<ResendActio
   const email = String(formData.get("email") || "");
   if (!email) return { formError: "Missing email." };
 
+  const rateLimit = await checkAuthRateLimit({ action: "resend", account: email });
+  if (!rateLimit.allowed) return createRateLimitResponse(rateLimit.retryAfterSeconds);
+
   const user = await getUserByEmail(email);
   if (!user || user.emailConfirmedAt) {
-    return { formError: "No pending confirmation for this email." };
+    return acceptedResend();
   }
 
   const lastSentAt = await getLatestEmailConfirmationTokenCreatedAt(user.id);
   if (lastSentAt && Date.now() - lastSentAt.getTime() < RESEND_COOLDOWN_MS) {
-    return { formError: "Please wait before requesting another email." };
+    return acceptedResend();
   }
 
   const token = await createEmailConfirmationToken(user.id);
@@ -75,10 +83,10 @@ export async function action({ request }: Route.ActionArgs): Promise<ResendActio
     });
   } catch {
     await deleteEmailConfirmationToken(token);
-    return { formError: "Failed to send email. Please try again later." };
+    return acceptedResend();
   }
 
-  return { resentAt: new Date().toISOString() };
+  return acceptedResend();
 }
 
 function useCountdown(targetMs: number | null) {

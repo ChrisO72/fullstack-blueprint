@@ -18,6 +18,7 @@ import {
 import { createUserWithPassword } from "~/lib/auth/registration.server";
 import { createTokens, verifyAccessToken } from "~/lib/auth/tokens.server";
 import { parseForm, type ActionData } from "~/lib/form";
+import { checkAuthRateLimit, createRateLimitResponse } from "~/lib/rate-limit.server";
 import { isEmailConfigured } from "~/mail/client.server";
 import { readAccessTokenCookie, setAuthCookies } from "~/lib/session.server";
 import { enqueueConfirmationEmailJob } from "~/worker/jobs/send-confirmation-email";
@@ -50,6 +51,9 @@ export async function action({ request }: Route.ActionArgs): Promise<ActionData 
   if (fieldErrors) return { fieldErrors };
 
   const { email, firstname, password } = data;
+
+  const rateLimit = await checkAuthRateLimit({ action: "signup", account: email });
+  if (!rateLimit.allowed) return createRateLimitResponse(rateLimit.retryAfterSeconds);
 
   if (settings.allowedDomains.length > 0) {
     const domain = email.split("@")[1]?.toLowerCase();

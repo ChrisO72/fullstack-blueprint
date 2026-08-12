@@ -1,6 +1,7 @@
 import { Form, redirect, useActionData, useNavigation } from "react-router";
 import { z } from "zod";
 import { FieldError } from "~/components/field-error";
+import { FormError } from "~/components/form-error";
 import { AuthLayout } from "~/components/ui-kit/auth-layout";
 import { Button } from "~/components/ui-kit/button";
 import { Field, Label } from "~/components/ui-kit/fieldset";
@@ -16,6 +17,7 @@ import {
 } from "~/lib/auth/password-reset.server";
 import { verifyAccessToken } from "~/lib/auth/tokens.server";
 import { parseForm, type ActionData } from "~/lib/form";
+import { checkAuthRateLimit, createRateLimitResponse } from "~/lib/rate-limit.server";
 import { isEmailConfigured } from "~/mail/client.server";
 import { readAccessTokenCookie } from "~/lib/session.server";
 import { enqueuePasswordResetEmailJob } from "~/worker/jobs/send-password-reset-email";
@@ -44,12 +46,20 @@ export async function loader({ request }: Route.LoaderArgs) {
   return null;
 }
 
-export async function action({ request }: Route.ActionArgs): Promise<ForgotPasswordActionData> {
+export async function action({
+  request,
+}: Route.ActionArgs): Promise<ForgotPasswordActionData | Response> {
   requireEmailConfigured();
 
   const formData = await request.formData();
   const { data, fieldErrors } = parseForm(formData, forgotPasswordSchema);
   if (fieldErrors) return { fieldErrors };
+
+  const rateLimit = await checkAuthRateLimit({
+    action: "password-reset",
+    account: data.email,
+  });
+  if (!rateLimit.allowed) return createRateLimitResponse(rateLimit.retryAfterSeconds);
 
   const user = await getUserByEmail(data.email);
   if (!user?.passwordHash || !(await canCreatePasswordResetToken(user.id))) {
@@ -93,6 +103,8 @@ export default function ForgotPasswordPage() {
         ) : (
           <Form method="POST" className="grid grid-cols-1 gap-8">
             <Text>Enter your email address and we&apos;ll send you a password reset link.</Text>
+
+            <FormError actionData={actionData} />
 
             <Field>
               <Label>Email</Label>

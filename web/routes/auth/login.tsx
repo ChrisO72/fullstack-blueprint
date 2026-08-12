@@ -13,6 +13,7 @@ import { validateLogin } from "~/lib/auth/password.server";
 import { createTokens, verifyAccessToken } from "~/lib/auth/tokens.server";
 import { parseForm, type ActionData } from "~/lib/form";
 import { isEmailConfigured } from "~/mail/client.server";
+import { checkAuthRateLimit, createRateLimitResponse } from "~/lib/rate-limit.server";
 import { readAccessTokenCookie, setAuthCookies } from "~/lib/session.server";
 import type { Route } from "./+types/login";
 
@@ -38,6 +39,9 @@ export async function action({ request }: Route.ActionArgs): Promise<ActionData 
   if (fieldErrors) return { fieldErrors };
 
   const { email, password } = data;
+
+  const rateLimit = await checkAuthRateLimit({ action: "login", account: email });
+  if (!rateLimit.allowed) return createRateLimitResponse(rateLimit.retryAfterSeconds);
 
   const user = await validateLogin(email, password);
   if (!user) {
