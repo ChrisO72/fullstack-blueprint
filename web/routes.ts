@@ -3,6 +3,8 @@ import { type RouteConfig, index, layout, route } from "@react-router/dev/routes
 export default [
   // Auth routes (unprotected)
   route("login", "routes/auth/login.tsx"),
+  route("forgot-password", "routes/auth/forgot-password.tsx"),
+  route("reset-password", "routes/auth/reset-password.tsx"),
   route("signup", "routes/auth/signup.tsx"),
   route("logout", "routes/auth/logout.tsx"),
   route("check-email", "routes/auth/check-email.tsx"),

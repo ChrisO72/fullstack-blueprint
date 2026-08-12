@@ -20,7 +20,9 @@ type Email = {
 
 export async function sendEmail({ to, subject, html, text }: Email) {
   if (!lettermint || !from) {
-    throw new Error("Email is not configured");
+    throw new Error(
+      "If the Lettermint environment variables are set, the app can send emails. Email is used for account confirmation and password resets.",
+    );
   }
 
   console.log(`[mail] sending email to ${to}`);

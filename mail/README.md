@@ -23,5 +23,6 @@ provider timeout may result in a duplicate message on retry.
 
 ## Configuration
 
-Set `LETTERMINT_API_KEY`, `LETTERMINT_MAIL_FROM`, and `APP_URL`. The first two are optional so email
-can remain disabled in development; `isEmailConfigured` reports whether both are present.
+Set `LETTERMINT_API_KEY`, `LETTERMINT_MAIL_FROM`, and `APP_URL`. If the Lettermint environment
+variables are set, the app can send emails. Email is used for account confirmation and password
+resets. `isEmailConfigured` reports whether both optional Lettermint variables are present.

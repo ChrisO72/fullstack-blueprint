@@ -48,7 +48,10 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 export async function action({ request }: Route.ActionArgs): Promise<ResendActionData> {
   if (!isEmailConfigured) {
-    return { formError: "Email is not configured." };
+    return {
+      formError:
+        "If the Lettermint environment variables are set, the app can send emails. Email is used for account confirmation and password resets.",
+    };
   }
 
   const formData = await request.formData();

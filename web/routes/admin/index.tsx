@@ -148,7 +148,8 @@ export default function AdminSettingsPage({ loaderData }: Route.ComponentProps) 
                 New users must confirm their email address before they can sign in.
                 {!isEmailConfigured && (
                   <span className="mt-1 block">
-                    Add Lettermint environment variables to enable email verification.
+                    If the Lettermint environment variables are set, the app can send emails. Email
+                    is used for account confirmation and password resets.
                   </span>
                 )}
               </Description>

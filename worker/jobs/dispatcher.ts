@@ -10,11 +10,17 @@ import {
   sendConfirmationEmailJobName,
   type SendConfirmationEmailJobData,
 } from "./send-confirmation-email";
+import {
+  handleSendPasswordResetEmailJob,
+  sendPasswordResetEmailJobName,
+  type SendPasswordResetEmailJobData,
+} from "./send-password-reset-email";
 
 export type JobData = {
   [expirePendingFileUploadJobName]: ExpirePendingFileUploadJobData;
   [exampleJobName]: ExampleJobData;
   [sendConfirmationEmailJobName]: SendConfirmationEmailJobData;
+  [sendPasswordResetEmailJobName]: SendPasswordResetEmailJobData;
 };
 
 export type JobName = keyof JobData;
@@ -36,6 +42,9 @@ export async function processJob(job: Job<JobData[JobName], void, JobName>) {
       break;
     case sendConfirmationEmailJobName:
       await handleSendConfirmationEmailJob(typedJob.data);
+      break;
+    case sendPasswordResetEmailJobName:
+      await handleSendPasswordResetEmailJob(typedJob.data);
       break;
     default:
       throw new Error(`[Worker] Unknown job name: ${job.name}`);

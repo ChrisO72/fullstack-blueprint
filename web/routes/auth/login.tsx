@@ -26,7 +26,10 @@ export async function loader({ request }: Route.LoaderArgs) {
   if (accessToken && verifyAccessToken(accessToken)) {
     return redirect("/");
   }
-  return null;
+
+  const passwordResetComplete =
+    new URL(request.url).searchParams.get("passwordReset") === "success";
+  return { passwordResetEnabled: isEmailConfigured, passwordResetComplete };
 }
 
 export async function action({ request }: Route.ActionArgs): Promise<ActionData | Response> {
@@ -54,7 +57,7 @@ export async function action({ request }: Route.ActionArgs): Promise<ActionData 
   });
 }
 
-export default function LoginPage() {
+export default function LoginPage({ loaderData }: Route.ComponentProps) {
   const actionData = useActionData<ActionData>();
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";
@@ -63,6 +66,12 @@ export default function LoginPage() {
     <AuthLayout>
       <Form method="POST" className="grid w-full max-w-sm grid-cols-1 gap-8">
         <Heading>Sign in to your account</Heading>
+
+        {loaderData.passwordResetComplete && (
+          <div className="rounded-md bg-green-50 p-4 text-sm text-green-700 dark:bg-green-900/20 dark:text-green-400">
+            Your password has been reset. You can now sign in.
+          </div>
+        )}
 
         <FormError actionData={actionData} />
 
@@ -76,6 +85,11 @@ export default function LoginPage() {
           <Input type="password" name="password" invalid={!!actionData?.fieldErrors?.password} />
           <FieldError name="password" actionData={actionData} />
         </Field>
+        {loaderData.passwordResetEnabled && (
+          <Text className="-mt-4 text-right">
+            <TextLink href="/forgot-password">Forgot password?</TextLink>
+          </Text>
+        )}
 
         <Button type="submit" className="w-full" disabled={isSubmitting}>
           {isSubmitting ? "Logging in..." : "Login"}
