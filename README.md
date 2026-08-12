@@ -63,11 +63,11 @@ can omit the S3 endpoint and static credentials to use the regional endpoint and
 
 ```bash
 npm test                       # critical auth and organization-boundary tests
-npm run check                  # typecheck + lint + format + tests (required pre-commit gate)
+npm run check                  # format + typecheck + lint + tests (required pre-commit gate)
 ```
 
-`npm run check` runs the `typecheck`, `lint`, `format:check`, and `test` scripts in sequence. It must
-pass before any change is considered done.
+`npm run check` formats the repository, then runs the `typecheck`, `lint`, and `test` scripts in
+sequence. It must pass before any change is considered done.
 
 Tests automatically start the local Postgres service and use a separate `blueprint_test` database
 inside the same container. The test schema is reset and migrated on every run; the development
@@ -77,7 +77,7 @@ development session is not interrupted.
 ### Continuous integration
 
 A GitHub Actions workflow runs on every pull request and verifies changes with the typecheck, lint,
-formatting, and test commands bundled by `npm run check`.
+formatting, and test commands similar to `npm run check` but without writing during the format check.
 
 ## Project layout
 
