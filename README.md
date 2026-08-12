@@ -66,13 +66,18 @@ npm test                       # critical auth and organization-boundary tests
 npm run check                  # typecheck + lint + format + tests (required pre-commit gate)
 ```
 
-`npm run check` runs `react-router typegen && tsc && eslint . && prettier --check . && npm test`. It
-must pass before any change is considered done.
+`npm run check` runs the `typecheck`, `lint`, `format:check`, and `test` scripts in sequence. It must
+pass before any change is considered done.
 
 Tests automatically start the local Postgres service and use a separate `blueprint_test` database
 inside the same container. The test schema is reset and migrated on every run; the development
 database, Redis, and S3 are untouched. Postgres remains running after the tests so an existing
 development session is not interrupted.
+
+### Continuous integration
+
+A GitHub Actions workflow runs on every pull request and verifies changes with the typecheck, lint,
+formatting, and test commands bundled by `npm run check`.
 
 ## Project layout
 
