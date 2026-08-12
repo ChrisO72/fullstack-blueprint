@@ -1,12 +1,11 @@
 # File Storage
 
-Private, S3-compatible object storage shared by the web app and worker. PostgreSQL holds
-organization-scoped metadata; object storage holds file bytes.
+Private S3 file storage shared by the web app and worker. PostgreSQL holds organization-scoped
+metadata; S3 holds file bytes.
 
 ## Local development
 
-`npm run docker:up` starts a MinIO-compatible server and creates the private `blueprint-files`
-bucket automatically.
+`npm run docker:up` starts MinIO and creates the private `blueprint-files` bucket automatically.
 
 - S3 API: `http://127.0.0.1:9000`
 - Console: `http://127.0.0.1:9001`
@@ -31,8 +30,7 @@ S3_FORCE_PATH_STYLE=false
 ```
 
 Leave `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, and `S3_SECRET_ACCESS_KEY` unset on AWS so the SDK uses its
-regional endpoint and default IAM credential chain. For another S3-compatible provider, set its
-endpoint and credentials; enable path-style addressing only when the provider requires it.
+regional endpoint and default IAM credential chain.
 
 The web and worker roles need only these bucket actions:
 

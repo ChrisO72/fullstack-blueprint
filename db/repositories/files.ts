@@ -1,4 +1,4 @@
-import { and, count, desc, eq, isNull, lt } from "drizzle-orm";
+import { and, count, desc, eq, isNull } from "drizzle-orm";
 import { db } from "../db";
 import { type InsertFile, files } from "../schema/files";
 
@@ -73,24 +73,4 @@ export async function countFilesByOrg(organizationId: number) {
     .from(files)
     .where(and(eq(files.organizationId, organizationId), isNull(files.deletedAt)));
   return result?.count ?? 0;
-}
-
-export async function listStalePendingFilesByOrg(
-  organizationId: number,
-  createdBefore: Date,
-  limit: number,
-) {
-  return await db
-    .select()
-    .from(files)
-    .where(
-      and(
-        eq(files.organizationId, organizationId),
-        eq(files.status, "pending"),
-        lt(files.createdAt, createdBefore),
-        isNull(files.deletedAt),
-      ),
-    )
-    .orderBy(files.createdAt)
-    .limit(limit);
 }

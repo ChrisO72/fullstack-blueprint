@@ -31,6 +31,11 @@ import {
   inspectStoredFile,
   MAX_UPLOAD_BYTES,
 } from "~/storage/objects.server";
+import { enqueueJob } from "~/worker/enqueue";
+import {
+  expirePendingFileUploadJobName,
+  PENDING_FILE_UPLOAD_TTL_MS,
+} from "~/worker/jobs/expire-pending-file-upload";
 import type { Route } from "./+types/index";
 import { Pagination } from "../manage-items/Pagination";
 import { UploadFileDialog } from "./UploadFileDialog";
@@ -142,6 +147,21 @@ export async function action({
 
     try {
       const upload = await createFileUpload(storageKey, data.contentType, data.size);
+      await enqueueJob(
+        expirePendingFileUploadJobName,
+        {
+          organizationId: user.organizationId,
+          fileId: file.id,
+        },
+        {
+          attempts: 3,
+          backoff: { type: "exponential", delay: 1_000 },
+          delay: PENDING_FILE_UPLOAD_TTL_MS,
+          jobId: `expire-file-upload-${file.id}`,
+          removeOnComplete: 100,
+          removeOnFail: 100,
+        },
+      );
       return {
         intent,
         prepared: {
@@ -151,7 +171,7 @@ export async function action({
         },
       };
     } catch (error) {
-      console.error("Failed to create file upload", error);
+      console.error("Failed to prepare file upload", error);
       await markFileFailed(file.id, user.organizationId);
       return { intent, formError: "The upload could not be prepared. Please try again." };
     }
@@ -183,7 +203,15 @@ export async function action({
         };
       }
 
-      await markFileReady(file.id, user.organizationId, storedFile.size);
+      const readyFile = await markFileReady(file.id, user.organizationId, storedFile.size);
+      if (!readyFile) {
+        return {
+          intent,
+          formError: "This upload is no longer pending.",
+          fileId: file.id,
+        };
+      }
+
       return { intent, success: true, fileId: file.id };
     } catch (error) {
       console.error("Failed to confirm stored file", error);

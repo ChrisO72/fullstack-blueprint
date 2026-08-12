@@ -2,12 +2,12 @@
 
 Template for full-stack Node + React applications.
 
-**Stack:** React Router 7 (SSR) · Tailwind + Catalyst UI · Drizzle + PostgreSQL · BullMQ + Redis · S3-compatible file storage · Auth
+**Stack:** React Router 7 (SSR) · Tailwind + Catalyst UI · Drizzle + PostgreSQL · BullMQ + Redis · S3 file storage · Auth
 
 ## Prerequisites
 
 - Node.js 24+
-- Docker (for local Postgres, Redis, and object storage)
+- Docker (for Postgres, Redis, and local S3 (MinIO))
 
 ## Local Development
 
@@ -16,12 +16,12 @@ Template for full-stack Node + React applications.
 ```bash
 npm install
 cp .env.example .env          # configure env vars
-npm run docker:up              # start Postgres, Redis, and object storage
+npm run docker:up              # start Postgres, Redis, and local S3 (MinIO)
 npm run db:migrate             # apply database migrations
 ```
 
-Postgres is exposed on `:55432`, Redis on `:6379`, and the S3-compatible API on `:9000`.
-The local object-storage console is available at `http://localhost:9001`; credentials are in
+Postgres is exposed on `:55432`, Redis on `:6379`, and the S3 API on `:9000`.
+The local S3 (MinIO) console is available at `http://localhost:9001`; credentials are in
 [`.env.example`](.env.example).
 
 ### Start dev server

@@ -51,11 +51,6 @@ export function registerHourlySyncSchedule() {
 
 Import each registration function in `schedules/register.ts` and call it from `startSchedules`.
 
-The included `cleanupStaleFiles` schedule runs daily. It enqueues one organization-scoped job per
-active organization to delete objects left by uploads that have remained `pending` for 24 hours,
-then marks their metadata as `failed`. Its queue options provide three attempts with exponential
-backoff.
-
 ### Enqueue from App
 
 ```typescript

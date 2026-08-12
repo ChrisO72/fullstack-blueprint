@@ -138,7 +138,7 @@ export function UploadFileDialog() {
       <Dialog open={isOpen} onClose={closeDialog}>
         <DialogTitle>Upload a private file</DialogTitle>
         <DialogDescription>
-          The file uploads directly to private object storage and is available only to your
+          The file uploads directly to private S3 storage and is available only to your
           organization.
         </DialogDescription>
         <DialogBody>

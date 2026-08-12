@@ -1,13 +1,13 @@
 import type { Job } from "bullmq";
 import {
-  cleanupStaleFilesJobName,
-  handleCleanupStaleFilesJob,
-  type CleanupStaleFilesJobData,
-} from "./cleanup-stale-files";
+  expirePendingFileUploadJobName,
+  handleExpirePendingFileUploadJob,
+  type ExpirePendingFileUploadJobData,
+} from "./expire-pending-file-upload";
 import { exampleJobName, handleExampleJob, type ExampleJobData } from "./example";
 
 export type JobData = {
-  [cleanupStaleFilesJobName]: CleanupStaleFilesJobData;
+  [expirePendingFileUploadJobName]: ExpirePendingFileUploadJobData;
   [exampleJobName]: ExampleJobData;
 };
 
@@ -22,8 +22,8 @@ export async function processJob(job: Job<JobData[JobName], void, JobName>) {
 
   const typedJob = job as TypedJob;
   switch (typedJob.name) {
-    case cleanupStaleFilesJobName:
-      await handleCleanupStaleFilesJob(typedJob.data);
+    case expirePendingFileUploadJobName:
+      await handleExpirePendingFileUploadJob(typedJob.data);
       break;
     case exampleJobName:
       await handleExampleJob(typedJob.data);
