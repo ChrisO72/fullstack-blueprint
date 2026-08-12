@@ -5,43 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1776633362878,
-      "tag": "0000_ambiguous_medusa",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1785536585820,
-      "tag": "0001_files",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1786539535555,
-      "tag": "0002_signup-setting",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1786540982592,
-      "tag": "0003_password_reset",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1786545747739,
-      "tag": "0004_drop_legacy_email_confirmation_tokens",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1786545757398,
-      "tag": "0005_create_hashed_email_confirmation_tokens",
+      "when": 1786550530343,
+      "tag": "0000_calm_dark_beast",
       "breakpoints": true
     }
   ]

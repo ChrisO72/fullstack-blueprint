@@ -1,1 +1,0 @@
-DROP TABLE "email_confirmation_tokens" CASCADE;

@@ -1,0 +1,75 @@
+envVarGroups:
+  - name: fullstack-blueprint-shared
+    envVars:
+      - key: NODE_VERSION
+        value: "24.14.1"
+      - key: JWT_SECRET
+        generateValue: true
+      - key: REFRESH_SECRET
+        generateValue: true
+      - key: RATE_LIMIT_KEY_SECRET
+        generateValue: true
+
+services:
+  - type: keyvalue
+    name: fullstack-blueprint-queue
+    plan: starter
+    region: frankfurt
+    ipAllowList: []
+    maxmemoryPolicy: noeviction
+    persistenceMode: journal-snapshot
+
+  - type: web
+    name: fullstack-blueprint-web
+    runtime: node
+    plan: starter
+    region: frankfurt
+    buildCommand: npm ci && npm run build
+    preDeployCommand: npm run db:migrate
+    startCommand: npm run start:web
+    envVars:
+      - fromGroup: fullstack-blueprint-shared
+      - key: DATABASE_URL
+        fromDatabase:
+          name: fullstack-blueprint-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: fullstack-blueprint-queue
+          property: connectionString
+      - key: APP_URL
+        fromService:
+          type: web
+          name: fullstack-blueprint-web
+          envVarKey: RENDER_EXTERNAL_URL
+
+  - type: worker
+    name: fullstack-blueprint-worker
+    runtime: node
+    plan: starter
+    region: frankfurt
+    buildCommand: npm ci && npm run build
+    startCommand: npm run start:worker
+    maxShutdownDelaySeconds: 120
+    envVars:
+      - fromGroup: fullstack-blueprint-shared
+      - key: DATABASE_URL
+        fromDatabase:
+          name: fullstack-blueprint-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: fullstack-blueprint-queue
+          property: connectionString
+      - key: APP_URL
+        fromService:
+          type: web
+          name: fullstack-blueprint-web
+          envVarKey: RENDER_EXTERNAL_URL
+
+databases:
+  - name: fullstack-blueprint-db
+    plan: basic-256mb
+    region: frankfurt

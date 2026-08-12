@@ -29,29 +29,5 @@ export const items = pgTable(
   ],
 );
 
-export const subItems = pgTable(
-  "sub_items",
-  {
-    id: integer().primaryKey().generatedAlwaysAsIdentity(),
-    ...timestamps,
-    itemId: integer("item_id")
-      .notNull()
-      .references(() => items.id, { onDelete: "cascade" }),
-    title: varchar({ length: 255 }).notNull(),
-    description: text(),
-  },
-  // Partial indexes: only index non-deleted rows to optimize soft-delete queries
-  (table) => [
-    index("sub_items_active_idx")
-      .on(table.id)
-      .where(sql`deleted_at IS NULL`),
-    index("sub_items_item_active_idx")
-      .on(table.itemId)
-      .where(sql`deleted_at IS NULL`),
-  ],
-);
-
 export type SelectItem = typeof items.$inferSelect;
 export type InsertItem = typeof items.$inferInsert;
-export type SelectSubItem = typeof subItems.$inferSelect;
-export type InsertSubItem = typeof subItems.$inferInsert;
