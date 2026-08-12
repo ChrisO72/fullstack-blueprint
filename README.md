@@ -2,7 +2,7 @@
 
 Template for full-stack Node + React applications.
 
-**Stack:** React Router 7 (SSR) · Tailwind + Catalyst UI · Drizzle + PostgreSQL · BullMQ + Redis · S3 file storage · Auth
+**Stack:** React Router 8 (SSR) · Tailwind + Catalyst UI · Drizzle + PostgreSQL · BullMQ + Redis · S3 file storage · Auth
 
 ## Prerequisites
 
@@ -87,7 +87,7 @@ formatting, and test commands similar to `npm run check` but without writing dur
 
 ## Project layout
 
-- [web/](web/) — React Router 7 SSR app. See [web/README.md](web/README.md) for routing, server boundary, validation, data access, and UI patterns.
+- [web/](web/) — React Router 8 SSR app. See [web/README.md](web/README.md) for routing, server boundary, validation, data access, and UI patterns.
 - [worker/](worker/) — BullMQ jobs + node-cron scheduler. See [worker/README.md](worker/README.md) for the job/scheduler templates.
 - [db/](db/) — Domain schema modules, generated migrations, repository functions. See [db/README.md](db/README.md) for the schema workflow and [db/repositories/README.md](db/repositories/README.md) for the repository template.
 - [mail/](mail/) — shared server-only email transport and templates. See [mail/README.md](mail/README.md) for the per-email worker pattern.

@@ -1,6 +1,6 @@
 # Web
 
-React Router 7 SSR app. See the repo-root [README.md](../README.md) for stack, commands, and conventions.
+React Router 8 SSR app. See the repo-root [README.md](../README.md) for stack, commands, and conventions.
 
 ## Routing
 
