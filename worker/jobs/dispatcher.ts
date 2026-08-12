@@ -5,10 +5,16 @@ import {
   type ExpirePendingFileUploadJobData,
 } from "./expire-pending-file-upload";
 import { exampleJobName, handleExampleJob, type ExampleJobData } from "./example";
+import {
+  handleSendConfirmationEmailJob,
+  sendConfirmationEmailJobName,
+  type SendConfirmationEmailJobData,
+} from "./send-confirmation-email";
 
 export type JobData = {
   [expirePendingFileUploadJobName]: ExpirePendingFileUploadJobData;
   [exampleJobName]: ExampleJobData;
+  [sendConfirmationEmailJobName]: SendConfirmationEmailJobData;
 };
 
 export type JobName = keyof JobData;
@@ -27,6 +33,9 @@ export async function processJob(job: Job<JobData[JobName], void, JobName>) {
       break;
     case exampleJobName:
       await handleExampleJob(typedJob.data);
+      break;
+    case sendConfirmationEmailJobName:
+      await handleSendConfirmationEmailJob(typedJob.data);
       break;
     default:
       throw new Error(`[Worker] Unknown job name: ${job.name}`);

@@ -12,7 +12,7 @@ import { getSiteSettings } from "~/db/repositories/settings";
 import { validateLogin } from "~/lib/auth/password.server";
 import { createTokens, verifyAccessToken } from "~/lib/auth/tokens.server";
 import { parseForm, type ActionData } from "~/lib/form";
-import { isEmailConfigured } from "~/lib/mail/client.server";
+import { isEmailConfigured } from "~/mail/client.server";
 import { readAccessTokenCookie, setAuthCookies } from "~/lib/session.server";
 import type { Route } from "./+types/login";
 

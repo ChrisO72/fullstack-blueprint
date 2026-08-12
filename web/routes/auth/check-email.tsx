@@ -6,12 +6,19 @@ import { FormError } from "~/components/form-error";
 import { Heading } from "~/components/ui-kit/heading";
 import { Strong, Text, TextLink } from "~/components/ui-kit/text";
 import { getUserByEmail } from "~/db/repositories/users";
-import { getLatestEmailConfirmationTokenCreatedAt } from "~/db/repositories/emailConfirmationTokens";
-import { createEmailConfirmationToken } from "~/lib/auth/email-confirmation.server";
+import {
+  deleteEmailConfirmationToken,
+  getLatestEmailConfirmationTokenCreatedAt,
+} from "~/db/repositories/emailConfirmationTokens";
+import {
+  CONFIRMATION_TOKEN_EXPIRY_HOURS,
+  createEmailConfirmationToken,
+} from "~/lib/auth/email-confirmation.server";
 import { verifyAccessToken } from "~/lib/auth/tokens.server";
 import type { ActionData } from "~/lib/form";
-import { sendConfirmationEmail } from "~/lib/mail/confirmation.server";
+import { isEmailConfigured } from "~/mail/client.server";
 import { readAccessTokenCookie } from "~/lib/session.server";
+import { enqueueConfirmationEmailJob } from "~/worker/jobs/send-confirmation-email";
 import type { Route } from "./+types/check-email";
 
 type ResendActionData = ActionData & { resentAt?: string };
@@ -40,6 +47,10 @@ export async function loader({ request }: Route.LoaderArgs) {
 }
 
 export async function action({ request }: Route.ActionArgs): Promise<ResendActionData> {
+  if (!isEmailConfigured) {
+    return { formError: "Email is not configured." };
+  }
+
   const formData = await request.formData();
   const email = String(formData.get("email") || "");
   if (!email) return { formError: "Missing email." };
@@ -56,8 +67,13 @@ export async function action({ request }: Route.ActionArgs): Promise<ResendActio
 
   const token = await createEmailConfirmationToken(user.id);
   try {
-    await sendConfirmationEmail(email, token);
+    await enqueueConfirmationEmailJob({
+      to: email,
+      token,
+      expiresInHours: CONFIRMATION_TOKEN_EXPIRY_HOURS,
+    });
   } catch {
+    await deleteEmailConfirmationToken(token);
     return { formError: "Failed to send email. Please try again later." };
   }
 

@@ -75,7 +75,7 @@ Server-only code lives in `*.server.ts` and is never imported from client compon
 
 - [lib/session.server.ts](lib/session.server.ts) — auth cookies, protected-route context, and authorization helpers.
 - `lib/auth/` — password validation, registration, session tokens, and email-confirmation tokens in focused server modules.
-- `lib/mail/` — outbound mail transport and one server module per email type.
+- [`../mail/`](../mail/) — shared outbound mail transport and one server module per email type, delivered through worker jobs.
 - [`../storage/`](../storage/) — shared S3 client and object operations used by web and worker code.
 
 ## Private file uploads

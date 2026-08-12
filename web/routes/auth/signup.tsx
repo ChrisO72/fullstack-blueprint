@@ -8,15 +8,19 @@ import { Field, Label } from "~/components/ui-kit/fieldset";
 import { Heading } from "~/components/ui-kit/heading";
 import { Input } from "~/components/ui-kit/input";
 import { Strong, Text, TextLink } from "~/components/ui-kit/text";
+import { deleteEmailConfirmationToken } from "~/db/repositories/emailConfirmationTokens";
 import { getSiteSettings } from "~/db/repositories/settings";
 import { getUserByEmail } from "~/db/repositories/users";
-import { createEmailConfirmationToken } from "~/lib/auth/email-confirmation.server";
+import {
+  CONFIRMATION_TOKEN_EXPIRY_HOURS,
+  createEmailConfirmationToken,
+} from "~/lib/auth/email-confirmation.server";
 import { createUserWithPassword } from "~/lib/auth/registration.server";
 import { createTokens, verifyAccessToken } from "~/lib/auth/tokens.server";
 import { parseForm, type ActionData } from "~/lib/form";
-import { isEmailConfigured } from "~/lib/mail/client.server";
+import { isEmailConfigured } from "~/mail/client.server";
 import { readAccessTokenCookie, setAuthCookies } from "~/lib/session.server";
-import { sendConfirmationEmail } from "~/lib/mail/confirmation.server";
+import { enqueueConfirmationEmailJob } from "~/worker/jobs/send-confirmation-email";
 import type { Route } from "./+types/signup";
 
 const signupSchema = z.object({
@@ -68,10 +72,15 @@ export async function action({ request }: Route.ActionArgs): Promise<ActionData 
   if (isEmailConfigured && settings.requireMailConfirmation) {
     const token = await createEmailConfirmationToken(user.id);
     try {
-      await sendConfirmationEmail(email, token);
+      await enqueueConfirmationEmailJob({
+        to: email,
+        token,
+        expiresInHours: CONFIRMATION_TOKEN_EXPIRY_HOURS,
+      });
     } catch {
+      await deleteEmailConfirmationToken(token);
       return {
-        formError: "Something went wrong sending the confirmation email. Please try again later.",
+        formError: "Something went wrong queuing the confirmation email. Please try again later.",
       };
     }
     return redirect(`/check-email?email=${encodeURIComponent(email)}`);
