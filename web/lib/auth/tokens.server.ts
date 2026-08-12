@@ -1,10 +1,6 @@
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
-import {
-  deleteRefreshTokenByHash,
-  findRefreshTokenByHash,
-  insertRefreshToken,
-} from "~/db/repositories/refreshTokens";
+import { consumeRefreshTokenByHash, insertRefreshToken } from "~/db/repositories/refreshTokens";
 import { getUserById } from "~/db/repositories/users";
 import { env } from "~/env.server";
 
@@ -72,14 +68,13 @@ export async function createTokens(userId: number, email: string) {
 
 export async function refreshAccessToken(token: string) {
   const tokenHash = hashRefreshToken(token);
-  const stored = await findRefreshTokenByHash(tokenHash);
+  const stored = await consumeRefreshTokenByHash(tokenHash);
   if (!stored) return null;
 
   const user = await getUserById(stored.userId);
   if (!user) return null;
 
-  // Rotate: invalidate the old token and issue a new pair
-  await deleteRefreshTokenByHash(tokenHash);
+  // Rotate only after atomically consuming the old token.
   const { accessToken, refreshToken } = await createTokens(user.id, user.email);
 
   return { accessToken, refreshToken, user };
