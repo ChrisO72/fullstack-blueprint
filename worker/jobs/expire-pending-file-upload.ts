@@ -1,8 +1,6 @@
 import { getFileById, markFileFailed } from "~/db/repositories/files";
-import { createLogger } from "~/observability/logger.server";
+import { log } from "~/observability/log.server";
 import { deleteStoredFile } from "~/storage/objects.server";
-
-const logger = createLogger("worker");
 
 export const expirePendingFileUploadJobName = "expirePendingFileUpload" as const;
 export const PENDING_FILE_UPLOAD_TTL_MS = 30 * 60 * 1000;
@@ -17,7 +15,7 @@ export async function handleExpirePendingFileUploadJob(data: ExpirePendingFileUp
 
   if (claimedFile) {
     await deleteStoredFile(claimedFile.storageKey);
-    logger.info("file.pending_upload.expired", { fileId: data.fileId });
+    log.info("Pending upload expired", { fileId: data.fileId });
     return;
   }
 
@@ -26,5 +24,5 @@ export async function handleExpirePendingFileUploadJob(data: ExpirePendingFileUp
 
   // A retry may find the metadata already failed if object deletion previously threw.
   await deleteStoredFile(file.storageKey);
-  logger.info("file.failed_upload.object_removed", { fileId: data.fileId });
+  log.info("Failed upload removed", { fileId: data.fileId });
 }

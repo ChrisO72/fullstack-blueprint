@@ -74,3 +74,15 @@ export const items = pgTable("items", {/* columns */}, (table) => [
     .where(sql`deleted_at IS NULL`),
 ]);
 ```
+
+## Migration startup failures
+
+`npm run db:migrate` uses Drizzle’s programmatic PostgreSQL migrator in [migrate.ts](migrate.ts).
+It applies the same generated journal and only unapplied migrations, closes its connection pool,
+and exits nonzero on failure. Error causes are printed without the CLI progress spinner, SQL
+parameters, or connection URLs, so Compose logs retain the reason an initialization service failed.
+
+A PostgreSQL `No space left on device` error requires freeing Docker disk space or increasing its
+disk allocation. Preserve the `pgdata` volume; `docker:wipe` is not a recovery command. After the
+storage issue is resolved, `make down` followed by `make dev` recreates containers and their network
+attachments while retaining named volumes.

@@ -88,3 +88,20 @@ await enqueueConfirmationEmailJob({
 - Keep handlers and schedule callbacks focused and minimal
 - Use cron expressions: `* * * * *` (min hour day month weekday)
 - Configure `attempts` and `backoff` when a job should retry; BullMQ jobs run once by default
+
+## Development and telemetry
+
+`make dev` runs the worker in Node 24. Compose Watch owns source synchronization and restarts; the
+worker has no nested file watcher. The host alternative remains `npm run dev:worker`.
+
+`enqueueJob` starts a producer span and puts W3C context in BullMQ’s `telemetry.metadata`; the
+job payload is unchanged. `processJob` extracts only string `traceparent`/`tracestate` fields and
+starts one consumer span per attempt. Missing/malformed metadata starts a new trace;
+`telemetry.omitContext` prevents propagation. Failures are logged inside that active span and
+rethrow the original error, preserving BullMQ retries. Job IDs are hashed in telemetry because
+existing IDs may include authentication tokens. Never log the payload.
+
+Request/job metrics use bounded labels; attempt numbers and hashed IDs appear only in logs/spans.
+On SIGINT/SIGTERM the worker stops accepting jobs, drains the current attempt, closes shared
+resources, then flushes the SDK. A 25-second deadline fits the container’s 30-second grace period.
+See [observability/README.md](../observability/README.md) for queries and logging examples.

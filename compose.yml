@@ -8,6 +8,10 @@ volumes:
   pgdata:
   redisdata:
   objectdata:
+  lokidata:
+  prometheusdata:
+  tempodata:
+  grafanadata:
 
 services:
   database:
@@ -29,6 +33,11 @@ services:
 
   redis:
     image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
     restart: always
     volumes:
       - redisdata:/data
@@ -59,10 +68,177 @@ services:
       S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-blueprint-secret-key}
       S3_BUCKET: ${S3_BUCKET:-blueprint-files}
     entrypoint: >
-      /bin/sh -c '
+      /bin/sh -ec '
+        attempts=0;
         until mc alias set local http://storage:9000 "$$S3_ACCESS_KEY_ID" "$$S3_SECRET_ACCESS_KEY"; do
+          attempts=$$((attempts + 1));
+          if [ "$$attempts" -ge 60 ]; then echo "Storage did not become ready" >&2; exit 1; fi;
           sleep 1;
         done;
         mc mb --ignore-existing "local/$$S3_BUCKET";
         mc anonymous set none "local/$$S3_BUCKET";
       '
+
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-blueprint-user}:${POSTGRES_PASSWORD:-blueprint-password}@database:5432/blueprint
+    depends_on:
+      database:
+        condition: service_healthy
+    command: ["npm", "run", "db:migrate"]
+
+  otelcol:
+    image: otel/opentelemetry-collector-contrib:0.162.0
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes:
+      - ./observability/config/collector.yaml:/etc/otelcol/config.yaml:ro
+    depends_on: [loki, prometheus, tempo]
+
+  loki:
+    image: grafana/loki:3.7.8
+    command: ["-config.file=/etc/loki/config.yaml"]
+    volumes:
+      - ./observability/config/loki.yaml:/etc/loki/config.yaml:ro
+      - lokidata:/loki
+
+  prometheus:
+    image: prom/prometheus:v3.15.0
+    command:
+      - --config.file=/etc/prometheus/prometheus.yaml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=3d
+      - --web.enable-otlp-receiver
+    volumes:
+      - ./observability/config/prometheus.yaml:/etc/prometheus/prometheus.yaml:ro
+      - prometheusdata:/prometheus
+
+  tempo:
+    image: grafana/tempo:3.1.0
+    command: ["-target=all", "-config.file=/etc/tempo/config.yaml"]
+    volumes:
+      - ./observability/config/tempo.yaml:/etc/tempo/config.yaml:ro
+      - tempodata:/var/tempo
+
+  grafana:
+    image: grafana/grafana:13.2.4
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - ./observability/config/grafana:/etc/grafana/provisioning/datasources:ro
+      - grafanadata:/var/lib/grafana
+    depends_on: [loki, prometheus, tempo]
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    init: true
+    stop_grace_period: 30s
+    env_file: .env
+    environment: &app-environment
+      NODE_ENV: development
+      DATABASE_URL: postgresql://${POSTGRES_USER:-blueprint-user}:${POSTGRES_PASSWORD:-blueprint-password}@database:5432/blueprint
+      REDIS_URL: redis://redis:6379
+      S3_ENDPOINT: http://storage:9000
+      S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:-http://127.0.0.1:9000}
+      OTEL_SERVICE_NAME: web
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otelcol:4318
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_TRACES_EXPORTER: otlp
+      OTEL_METRICS_EXPORTER: otlp
+      OTEL_LOGS_EXPORTER: otlp
+      OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE: cumulative
+      OTEL_METRIC_EXPORT_INTERVAL: "5000"
+      OTEL_METRIC_EXPORT_TIMEOUT: "3000"
+      OTEL_TRACES_SAMPLER: always_on
+      OTEL_PROPAGATORS: tracecontext
+    depends_on: &app-dependencies
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+      storage-init:
+        condition: service_completed_successfully
+      otelcol:
+        condition: service_started
+    command:
+      - node
+      - --conditions=development
+      - --experimental-loader=@opentelemetry/instrumentation/hook.mjs
+      - --import
+      - tsx
+      - --import
+      - ./observability/register.server.ts
+      - ./node_modules/@react-router/dev/bin.cjs
+      - dev
+    ports:
+      - "127.0.0.1:5173:5173"
+    develop:
+      watch:
+        - action: sync
+          path: .
+          target: /app
+          initial_sync: true
+          ignore:
+            - observability/
+            - package.json
+            - package-lock.json
+            - Dockerfile.dev
+            - compose.yml
+        - action: sync+restart
+          path: ./observability
+          target: /app/observability
+          initial_sync: true
+        - action: rebuild
+          path: package.json
+        - action: rebuild
+          path: package-lock.json
+        - action: rebuild
+          path: Dockerfile.dev
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    init: true
+    stop_grace_period: 30s
+    env_file: .env
+    environment:
+      <<: *app-environment
+      OTEL_SERVICE_NAME: worker
+    depends_on: *app-dependencies
+    command:
+      - node
+      - --experimental-loader=@opentelemetry/instrumentation/hook.mjs
+      - --import
+      - tsx
+      - --import
+      - ./observability/register.server.ts
+      - worker/index.ts
+    develop:
+      watch:
+        - action: sync+restart
+          path: .
+          target: /app
+          initial_sync: true
+          ignore:
+            - package.json
+            - package-lock.json
+            - Dockerfile.dev
+            - compose.yml
+        - action: rebuild
+          path: package.json
+        - action: rebuild
+          path: package-lock.json
+        - action: rebuild
+          path: Dockerfile.dev

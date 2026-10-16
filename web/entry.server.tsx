@@ -8,44 +8,13 @@ import {
   ServerRouter,
   type EntryContext,
   type HandleErrorFunction,
-  type RouterContextProvider,
-  type ServerInstrumentation,
 } from "react-router";
-import { createLogger } from "~/observability/logger.server";
-import { getRequestId } from "./lib/request-context.server";
-
-const logger = createLogger("web");
+import { log } from "~/observability/log.server";
+export { instrumentations } from "~/observability/http.server";
 
 export const streamTimeout = 5_000;
 
-export const instrumentations: ServerInstrumentation[] = [
-  {
-    handler({ instrument }) {
-      instrument({
-        async request(handleRequest, { request, context }) {
-          const startedAt = performance.now();
-          const result = await handleRequest();
-          const fields = {
-            requestId: getRequestId(context),
-            method: request.method,
-            path: new URL(request.url).pathname,
-            routePattern: result.meta?.pattern || "unmatched",
-            statusCode: result.statusCode,
-            durationMs: Math.round(performance.now() - startedAt),
-          };
-
-          if (result.statusCode >= 500) {
-            logger.warn("http.request.completed", fields);
-          } else {
-            logger.info("http.request.completed", fields);
-          }
-        },
-      });
-    },
-  },
-];
-
-export const handleError: HandleErrorFunction = (error, { request, context }) => {
+export const handleError: HandleErrorFunction = (error, { request }) => {
   if (
     request.signal.aborted ||
     (isRouteErrorResponse(error) && error.status < 500) ||
@@ -54,10 +23,8 @@ export const handleError: HandleErrorFunction = (error, { request, context }) =>
     return;
   }
 
-  logger.error("http.request.unhandled_error", error, {
-    requestId: getRequestId(context),
-    method: request.method,
-    path: new URL(request.url).pathname,
+  log.error("Unhandled request error", error, {
+    "http.request.method": request.method,
   });
 };
 
@@ -66,7 +33,6 @@ export default function handleRequest(
   responseStatusCode: number,
   responseHeaders: Headers,
   routerContext: EntryContext,
-  loadContext: RouterContextProvider,
 ) {
   if (request.method.toUpperCase() === "HEAD") {
     return new Response(null, {
@@ -116,10 +82,8 @@ export default function handleRequest(
         onError(error: unknown) {
           responseStatusCode = 500;
           if (shellRendered) {
-            logger.error("http.render.streaming_error", error, {
-              requestId: getRequestId(loadContext),
-              method: request.method,
-              path: new URL(request.url).pathname,
+            log.error("Streaming render failed", error, {
+              "http.request.method": request.method,
             });
           }
         },

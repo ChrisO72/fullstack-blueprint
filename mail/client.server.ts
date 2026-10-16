@@ -1,8 +1,6 @@
 import { Lettermint } from "lettermint";
 import { env } from "~/env.server";
-import { createLogger } from "~/observability/logger.server";
-
-const logger = createLogger("worker");
+import { log } from "~/observability/log.server";
 
 const lettermint = env.LETTERMINT_API_KEY
   ? new Lettermint({
@@ -28,30 +26,10 @@ export async function sendEmail({ to, subject, html, text }: Email) {
     );
   }
 
-  const startedAt = performance.now();
-  logger.info("mail.send.started", { component: "mail" });
-
-  let response;
   try {
-    response = await lettermint.email
-      .from(from)
-      .to(to)
-      .subject(subject)
-      .html(html)
-      .text(text)
-      .send();
+    await lettermint.email.from(from).to(to).subject(subject).html(html).text(text).send();
   } catch (error) {
-    logger.error("mail.send.failed", error, {
-      component: "mail",
-      durationMs: Math.round(performance.now() - startedAt),
-    });
+    log.error("Email delivery failed", error);
     throw error;
   }
-
-  logger.info("mail.send.completed", {
-    component: "mail",
-    durationMs: Math.round(performance.now() - startedAt),
-    providerMessageId: response.message_id,
-    providerStatus: response.status,
-  });
 }

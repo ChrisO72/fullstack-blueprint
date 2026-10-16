@@ -3,7 +3,7 @@ import { createPresignedPost } from "@aws-sdk/s3-presigned-post";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { randomUUID } from "node:crypto";
 import { env } from "~/env.server";
-import { storageClient } from "./client.server";
+import { storageClient, storageSigningClient } from "./client.server";
 
 export const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
 export const isFileStorageEnabled = Boolean(env.S3_BUCKET);
@@ -18,7 +18,7 @@ export async function createFileUpload(
   contentType: string,
   expectedSize: number,
 ) {
-  return createPresignedPost(storageClient, {
+  return createPresignedPost(storageSigningClient, {
     Bucket: getStorageBucket(),
     Key: storageKey,
     Expires: SIGNED_URL_TTL_SECONDS,
@@ -50,7 +50,7 @@ export async function createFileDownloadUrl(storageKey: string, filename: string
   const contentDisposition = createAttachmentDisposition(filename);
 
   return getSignedUrl(
-    storageClient,
+    storageSigningClient,
     new GetObjectCommand({
       Bucket: getStorageBucket(),
       Key: storageKey,
@@ -63,7 +63,7 @@ export async function createFileDownloadUrl(storageKey: string, filename: string
 
 export async function createFilePreviewUrl(storageKey: string, contentType: string) {
   return getSignedUrl(
-    storageClient,
+    storageSigningClient,
     new GetObjectCommand({
       Bucket: getStorageBucket(),
       Key: storageKey,

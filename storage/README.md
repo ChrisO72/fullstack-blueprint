@@ -8,7 +8,7 @@ starts and the Files page displays setup guidance instead of file controls.
 
 ## Local development
 
-`npm run docker:up` starts MinIO and creates the private `blueprint-files` bucket automatically.
+`make dev` (or the host workflow’s `npm run docker:up`) starts MinIO and creates the private `blueprint-files` bucket automatically.
 
 - S3 API: `http://127.0.0.1:9000`
 - Console: `http://127.0.0.1:9001`
@@ -16,10 +16,13 @@ starts and the Files page displays setup guidance instead of file controls.
 - Credentials and bucket: [`.env.example`](../.env.example)
 
 The `objectdata` Docker volume preserves files across restarts. `npm run docker:wipe` deliberately
-removes it along with PostgreSQL and Redis data.
+removes it along with PostgreSQL, Redis, and observability data.
 
 The browser must receive presigned URLs containing `127.0.0.1:9000`, not the Compose hostname
-`storage`. The provided endpoint does this because the web process runs on the host.
+`storage`. Compose supplies `S3_ENDPOINT=http://storage:9000` for server operations and
+`S3_PUBLIC_ENDPOINT=http://127.0.0.1:9000` for upload, preview, and download signing. The signing
+client uses the same region, credentials, and path-style setting. It falls back to `S3_ENDPOINT`
+when `S3_PUBLIC_ENDPOINT` is absent. URLs are signed for their final endpoint; they are never rewritten.
 
 ## Production S3
 
@@ -32,7 +35,7 @@ S3_BUCKET=your-private-bucket
 S3_FORCE_PATH_STYLE=false
 ```
 
-Leave `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, and `S3_SECRET_ACCESS_KEY` unset on AWS so the SDK uses its
+Leave `S3_ENDPOINT`, `S3_PUBLIC_ENDPOINT`, `S3_ACCESS_KEY_ID`, and `S3_SECRET_ACCESS_KEY` unset on AWS so the SDK uses its
 regional endpoint and default IAM credential chain.
 
 The web and worker roles need only these bucket actions:
