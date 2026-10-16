@@ -1,13 +1,34 @@
-# Fullstack Blueprint
+# Web App Blueprint
 
-Template for full-stack Node + React applications.
+A battle tested template for a complete web application.
+Each part of the app has it's own dedicated README file for more info.
 
-**Stack:** React Router 8 (SSR) · Tailwind + Catalyst UI · Drizzle + PostgreSQL · BullMQ + Redis · S3 file storage · Auth
+Cool stuff included: [TypeScript](https://www.typescriptlang.org/) | [React](https://react.dev/) | [React Router](https://reactrouter.com/) | [PostgreSQL](https://www.postgresql.org/) | [Redis](https://redis.io/) | [Vite](https://vite.dev/) | [Tailwind CSS](https://tailwindcss.com/) | [Drizzle ORM](https://orm.drizzle.team/) | [BullMQ](https://bullmq.io/) | [Headless UI](https://headlessui.com/) | [Motion](https://motion.dev/) | [Zod](https://zod.dev/) | [Heroicons](https://heroicons.com/) | [Lettermint](https://lettermint.co/)
 
-## Prerequisites
-
-- Node.js 24+
-- Docker (for Postgres, Redis, and local S3 (MinIO))
+<pre>
+├── web/                 # A fullstack React Router app, UI + API
+│   ├── <a href="web/README.md">README.md</a>
+│   ├── components/
+│   ├── lib/
+│   ├── public/
+│   └── routes/
+├── worker/              # Background jobs and scheduled tasks
+│   ├── <a href="worker/README.md">README.md</a>
+│   ├── jobs/
+│   └── schedules/
+├── db/                  # PostgreSQL database with Drizzle ORM
+│   ├── <a href="db/README.md">README.md</a>
+│   ├── schema/
+│   ├── repositories/
+│   └── drizzle/
+├── mail/                # Email sending and templates
+│   └── <a href="mail/README.md">README.md</a>
+├── storage/             # S3 file storage
+│   └── <a href="storage/README.md">README.md</a>
+├── observability/       # Structured logging and redaction
+│   └── <a href="observability/README.md">README.md</a>
+└── test/                # Automated tests
+</pre>
 
 ## Local Development
 
