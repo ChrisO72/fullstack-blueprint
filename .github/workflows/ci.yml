@@ -33,13 +33,8 @@ jobs:
       - name: Check formatting
         run: npm run format:check
 
-      - name: Set up Docker Compose
-        uses: docker/setup-compose-action@v2
-        with:
-          version: v2.32.4
-
-      - name: Prepare Compose environment
-        run: cp .env.example .env
-
-      - name: Test
+      - name: Unit tests
         run: npm test
+
+      - name: Integration tests
+        run: npm run test:integration

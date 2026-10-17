@@ -1,0 +1,18 @@
+name: fullstack-blueprint-test
+
+services:
+  database:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: blueprint_test
+      POSTGRES_USER: blueprint-test
+      POSTGRES_PASSWORD: blueprint-test
+    ports:
+      - "127.0.0.1:55433:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 2s
+      timeout: 5s
+      retries: 15

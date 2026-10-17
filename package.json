@@ -22,13 +22,14 @@
     "db:studio": "drizzle-kit studio",
     "typecheck": "react-router typegen && tsc",
     "lint": "eslint .",
-    "check": "npm run format && npm run typecheck && npm run lint && npm test",
+    "check": "npm run format && npm run typecheck && npm run lint && npm test && npm run test:integration",
     "docker:up": "docker compose up -d database redis storage storage-init",
     "docker:down": "docker compose down",
     "docker:wipe": "docker compose down -v",
     "format": "npx prettier . --write",
     "format:check": "npx prettier . --check",
-    "test": "tsx test/run.ts",
+    "test": "vitest run --project unit",
+    "test:integration": "tsx test/run.ts",
     "build:observability": "esbuild observability/register.server.ts --bundle --platform=node --format=esm --outfile=build/observability.js --packages=external"
   },
   "dependencies": {

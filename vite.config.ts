@@ -3,6 +3,7 @@ import { reactRouter } from "@react-router/dev/vite";
 import tailwindcss from "@tailwindcss/vite";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
+import { testEnvironment } from "./test/environment.ts";
 
 export default defineConfig({
   server: { host: "0.0.0.0", port: 5173, strictPort: true },
@@ -41,9 +42,26 @@ export default defineConfig({
     ],
   },
   test: {
-    fileParallelism: false,
-    include: ["test/**/*.test.ts"],
-    maxWorkers: 1,
-    setupFiles: ["./test/setup.ts"],
+    env: testEnvironment,
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: "unit",
+          include: ["test/**/*.test.ts"],
+          exclude: ["test/**/*.integration.test.ts"],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: "integration",
+          include: ["test/**/*.integration.test.ts"],
+          fileParallelism: false,
+          maxWorkers: 1,
+          setupFiles: ["./test/setup.ts"],
+        },
+      },
+    ],
   },
 });

@@ -113,24 +113,30 @@ for signal flow, logging patterns, retention, and Explore queries.
 ## Checks
 
 ```bash
-npm test                       # critical auth and organization-boundary tests
-npm run check                  # format + typecheck + lint + tests (required pre-commit gate)
+npm test                       # unit tests; no Docker or external services
+npm run test:integration        # auth and organization-boundary tests with isolated Postgres
+npm run check                  # format + typecheck + lint + both test suites (required gate)
 ```
 
-`npm run check` formats the repository, then runs the `typecheck`, `lint`, and `test` scripts in
-sequence. It must pass before any change is considered done.
+`npm run check` formats the repository, then runs the `typecheck`, `lint`, `test`, and
+`test:integration` scripts in sequence. It must pass before any change is considered done.
 
-Tests automatically start the local Postgres service and use a separate `blueprint_test` database
-inside the same container. The test schema is reset and migrated on every run; the development
-database, Redis, and S3 are untouched. Postgres remains running after the tests so an existing
-development session is not interrupted.
+Unit tests cover rate limiting, logging, and telemetry using in-memory dependencies. Add unit tests
+as `test/**/*.test.ts`; use `*.integration.test.ts` for tests requiring a real database. Database
+cleanup runs only for integration tests.
+
+Integration tests use [test/compose.yml](test/compose.yml) to start a disposable Postgres container
+on `127.0.0.1:55433`, with its own Compose project and `blueprint_test` database. The runner resets
+and migrates the schema before testing, then removes the test container and its data on success or
+failure. These tests require Docker Compose with `up --wait` support but do not load the development
+Compose file or require `.env`. The development database, Redis, and S3 are untouched.
 
 ### Continuous integration
 
 A GitHub Actions workflow runs on every pull request and verifies changes with the typecheck, lint,
 formatting, and test commands similar to `npm run check` but without writing during the format check.
-CI installs Docker Compose 2.32.4 to support the shared Compose file's Watch configuration and copies
-`.env.example` to `.env` before running tests.
+Unit and integration tests run as separate steps. Only the integration step starts Postgres, using
+the test-only Compose file; development Watch configuration is not involved.
 
 ## Conventions
 
