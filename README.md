@@ -129,6 +129,8 @@ development session is not interrupted.
 
 A GitHub Actions workflow runs on every pull request and verifies changes with the typecheck, lint,
 formatting, and test commands similar to `npm run check` but without writing during the format check.
+CI installs Docker Compose 2.32.4 to support the shared Compose file's Watch configuration and copies
+`.env.example` to `.env` before running tests.
 
 ## Conventions
 
