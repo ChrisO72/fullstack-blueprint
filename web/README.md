@@ -180,3 +180,20 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~
 - Tailwind v4 — no `tailwind.config.js`; tokens live in [app.css](app.css).
 - Use `clsx` for conditional class composition.
 - Icons: `@heroicons/react`. Pass `data-slot="icon"` so ui-kit components style them correctly.
+
+## Development and observability
+
+`make dev` runs Vite on `0.0.0.0:5173` inside Docker, published only at `localhost:5173`.
+The port is strict; Vite’s default host restrictions remain enabled. Compose Watch syncs source
+for HMR and restarts the process for telemetry bootstrap changes. The host command remains
+`npm run dev:web`.
+
+React Router’s request instrumentation creates the server span, extracts incoming W3C context,
+and records the matched route pattern, status, count, and duration. It inspects returned error
+metadata as well as thrown errors. Duration measures handler execution, not the complete streamed
+response lifetime. Streaming errors still use `handleError`/`onError` reporting. There is no custom
+request-ID middleware or response header; OpenTelemetry trace/span IDs provide correlation.
+
+The SDK loads before the web CLI and stays outside Vite HMR. Vite closes its HTTP server before
+application resources and the SDK are shut down on SIGINT/SIGTERM. See
+[observability/README.md](../observability/README.md) for conventions.

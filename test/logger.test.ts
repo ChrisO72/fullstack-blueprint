@@ -1,114 +1,82 @@
-import { Writable } from "node:stream";
-import { describe, expect, it } from "vitest";
-import { createLogger, runWithLogContext } from "~/observability/logger.server";
+import { context, ROOT_CONTEXT, trace, TraceFlags } from "@opentelemetry/api";
+import { logs } from "@opentelemetry/api-logs";
+import {
+  InMemoryLogRecordExporter,
+  LoggerProvider,
+  SimpleLogRecordProcessor,
+} from "@opentelemetry/sdk-logs";
+import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
+import { log } from "~/observability/log.server";
+import { safeJobId, sanitizeAttributes, sanitizeError } from "~/observability/sanitize.server";
 
-function captureLogger(service = "test") {
-  let output = "";
-  const destination = new Writable({
-    write(chunk, _encoding, callback) {
-      output += chunk.toString();
-      callback();
-    },
-  });
+const exporter = new InMemoryLogRecordExporter();
+const provider = new LoggerProvider({ processors: [new SimpleLogRecordProcessor({ exporter })] });
+logs.setGlobalLoggerProvider(provider);
+afterAll(async () => {
+  await provider.shutdown();
+  logs.disable();
+});
+afterEach(() => {
+  exporter.reset();
+  vi.restoreAllMocks();
+});
 
-  return {
-    logger: createLogger(service, { destination }),
-    records() {
-      return output
-        .trim()
-        .split("\n")
-        .filter(Boolean)
-        .map((line) => JSON.parse(line) as Record<string, unknown>);
-    },
-    output() {
-      return output;
-    },
-  };
-}
-
-describe("structured logger", () => {
-  it("writes machine-parseable service, level, event, and correlation fields", () => {
-    const capture = captureLogger("web");
-
-    runWithLogContext({ requestId: "request-123" }, () => {
-      capture.logger.info("http.request.completed", {
-        statusCode: 200,
-        durationMs: 12,
-      });
+describe("OpenTelemetry logging", () => {
+  it("uses the active span for trace and span correlation", async () => {
+    const spanContext = {
+      traceId: "12345678901234567890123456789012",
+      spanId: "1234567890123456",
+      traceFlags: TraceFlags.SAMPLED,
+    };
+    vi.spyOn(context, "active").mockReturnValue(trace.setSpanContext(ROOT_CONTEXT, spanContext));
+    log.info("Job completed", { "job.name": "sendConfirmationEmail", "job.attempt": 1 });
+    await provider.forceFlush();
+    expect(exporter.getFinishedLogRecords()[0]).toMatchObject({
+      body: "Job completed",
+      severityText: "INFO",
+      spanContext,
+      attributes: { "job.name": "sendConfirmationEmail", "job.attempt": 1 },
     });
-
-    expect(capture.records()).toEqual([
-      expect.objectContaining({
-        service: "web",
-        level: "info",
-        event: "http.request.completed",
-        requestId: "request-123",
-        statusCode: 200,
-        durationMs: 12,
-        timestamp: expect.any(String),
-      }),
-    ]);
   });
 
-  it("redacts sensitive fields recursively and sanitizes sensitive strings", () => {
-    const capture = captureLogger();
-    const secretToken = "raw-confirmation-token";
-    const password = "raw-password";
-    const email = "private@example.com";
-
-    capture.logger.info("redaction.test", {
-      nested: {
-        deeper: {
-          token: secretToken,
-          password,
-          contact: email,
-          url: `https://example.com/confirm?token=${secretToken}`,
-        },
+  it("excludes unapproved fields and raw error messages and stacks", async () => {
+    log.error(
+      "Email delivery failed",
+      new Error("private@example.com token=secret SELECT 'password'"),
+      {
+        "job.name": "sendConfirmationEmail",
+        password: "secret",
+        payload: "private",
+        "db.query.text": "SELECT 'password'",
+        "url.full": "https://host/token",
       },
-      payload: { safe: "value" },
-    });
-
-    expect(capture.output()).not.toContain(secretToken);
-    expect(capture.output()).not.toContain(password);
-    expect(capture.output()).not.toContain(email);
-    expect(capture.records()[0]).toMatchObject({
-      nested: {
-        deeper: {
-          token: "[Redacted]",
-          password: "[Redacted]",
-          contact: "[Redacted email address]",
-          url: "https://example.com/confirm?token=[Redacted]",
-        },
-      },
-      payload: "[Redacted]",
-    });
-  });
-
-  it("includes normalized, redacted error metadata", () => {
-    const capture = captureLogger("worker");
-    const error = new Error(
-      "Provider rejected private@example.com at https://example.com/send?token=raw-token",
     );
-
-    runWithLogContext({ jobId: "job-123", jobName: "sendConfirmationEmail" }, () => {
-      capture.logger.error("mail.send.failed", error);
+    await provider.forceFlush();
+    const [record] = exporter.getFinishedLogRecords();
+    expect(record.attributes).toEqual({
+      "job.name": "sendConfirmationEmail",
+      "error.type": "Error",
+      "exception.message": "Operation failed",
     });
+    expect(JSON.stringify(record)).not.toContain("private@example.com");
+    expect(JSON.stringify(record)).not.toContain("SELECT");
+  });
 
-    const [record] = capture.records();
-    expect(record).toMatchObject({
-      service: "worker",
-      level: "error",
-      event: "mail.send.failed",
-      jobId: "job-123",
-      jobName: "sendConfirmationEmail",
-      error: {
-        type: "Error",
-        message:
-          "Provider rejected [Redacted email address] at https://example.com/send?token=[Redacted]",
-        stack: expect.any(String),
-      },
+  it("drops both SQL conventions and hashes token-bearing job IDs", () => {
+    expect(
+      sanitizeAttributes({
+        "db.statement": "SELECT secret",
+        "db.query.text": "SELECT secret",
+        "db.system": "postgresql",
+        "http.request.header.authorization": "secret",
+      }),
+    ).toEqual({ "db.system": "postgresql" });
+    expect(sanitizeError({ payload: "secret" })).toEqual({
+      name: "Error",
+      message: "Operation failed",
     });
-    expect(capture.output()).not.toContain("private@example.com");
-    expect(capture.output()).not.toContain("raw-token");
+    const id = "send-confirmation-email-secret-token";
+    expect(safeJobId(id)).toBe(safeJobId(id));
+    expect(safeJobId(id)).not.toContain("secret-token");
   });
 });

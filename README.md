@@ -1,47 +1,91 @@
-# Fullstack Blueprint
+# Web App Blueprint
 
-Template for full-stack Node + React applications.
+A battle tested template for a complete web application.
+Each part of the app has it's own dedicated README file for more info.
 
-**Stack:** React Router 8 (SSR) · Tailwind + Catalyst UI · Drizzle + PostgreSQL · BullMQ + Redis · S3 file storage · Auth
+Cool stuff included: [TypeScript](https://www.typescriptlang.org/) | [React](https://react.dev/) | [React Router](https://reactrouter.com/) | [PostgreSQL](https://www.postgresql.org/) | [Redis](https://redis.io/) | [Vite](https://vite.dev/) | [Tailwind CSS](https://tailwindcss.com/) | [Drizzle ORM](https://orm.drizzle.team/) | [BullMQ](https://bullmq.io/) | [Headless UI](https://headlessui.com/) | [Motion](https://motion.dev/) | [Zod](https://zod.dev/) | [Heroicons](https://heroicons.com/) | [Lettermint](https://lettermint.co/)
 
-## Prerequisites
-
-- Node.js 24+
-- Docker (for Postgres, Redis, and local S3 (MinIO))
+<pre>
+├── web/                 # A fullstack React Router app, UI + API
+│   ├── <a href="web/README.md">README.md</a>
+│   ├── components/
+│   ├── lib/
+│   ├── public/
+│   └── routes/
+├── worker/              # Background jobs and scheduled tasks
+│   ├── <a href="worker/README.md">README.md</a>
+│   ├── jobs/
+│   └── schedules/
+├── db/                  # PostgreSQL database with Drizzle ORM
+│   ├── <a href="db/README.md">README.md</a>
+│   ├── schema/
+│   ├── repositories/
+│   └── drizzle/
+├── mail/                # Email sending and templates
+│   └── <a href="mail/README.md">README.md</a>
+├── storage/             # S3 file storage
+│   └── <a href="storage/README.md">README.md</a>
+├── observability/       # OpenTelemetry logs, metrics and traces
+│   └── <a href="observability/README.md">README.md</a>
+└── test/                # Automated tests
+</pre>
 
 ## Local Development
 
-### First time setup
+### Container development
+
+Requires Docker Compose **2.32.0+** with Watch support. Configure `.env` before starting:
 
 ```bash
-npm install
-cp .env.example .env          # configure env vars
-npm run docker:up              # start Postgres, Redis, and local S3 (MinIO)
-npm run db:migrate             # apply database migrations
+cp .env.example .env          # configure secrets and optional mail credentials
+make dev
 ```
 
-Postgres is exposed on `:55432`, Redis on `:6379`, and the S3 API on `:9000`.
-The local S3 (MinIO) console is available at `http://localhost:9001`; credentials are in
-[`.env.example`](.env.example).
+This builds the Node 24 development image and starts Postgres, Redis, MinIO, bucket initialization,
+database migrations, the OpenTelemetry Collector, Loki, Prometheus, Tempo, Grafana, web, and worker.
+Migrations and bucket initialization must succeed before either application starts. Existing database,
+Redis, and file volumes are preserved.
 
-### Start dev server
+- App: <http://localhost:5173>
+- Grafana: <http://localhost:3000> (`admin` / `admin` by default; configurable in `.env`)
+- MinIO console: <http://localhost:9001> (S3 credentials from `.env`)
+- Postgres: `127.0.0.1:55432`; Redis: `127.0.0.1:6379`; S3: `127.0.0.1:9000`
+
+Only these ports are published, on loopback. Collector, Loki, Prometheus, and Tempo stay on the
+Compose network. Open Grafana Explore to query them; see [observability/README.md](observability/README.md).
+
+Compose Watch synchronizes source for web HMR and restarts the worker on source changes. Changes in
+`observability/` restart both app processes so the SDK is initialized once per process. Dependency
+manifest changes rebuild both app images. Host dependencies, secrets, Git, and generated output are
+excluded from image copies and synchronization. After changing `.env`, Compose configuration,
+backend configuration, or migrations, stop and run `make dev` again. Migration generation still
+uses the host command below; migration files are committed normally.
 
 ```bash
-npm run dev
+make down                     # stop the stack; keep all data volumes
 ```
 
-The app runs at `http://localhost:5173`.
+### Host npm workflow
 
-### Local services
+Node 24+ is required. Run this instead of the container app pair:
 
 ```bash
-npm run docker:up              # start
-npm run docker:down            # stop
-npm run docker:wipe            # stop + delete volumes
+npm ci
+npm run docker:up             # Postgres, Redis, MinIO and bucket initialization only
+npm run db:migrate
+npm run dev                   # host web + worker; OpenTelemetry console logs by default
+```
 
-npm run db:generate -- --name=migration_name   # create a new migration
-npm run db:migrate                             # apply migrations
-npm run db:studio                              # open Drizzle Studio browser
+Stop the container app pair first to free the web port and avoid a second worker. Without an OTLP
+endpoint the host workflow disables remote traces/metrics. Do not point host processes at the
+Compose-only `otelcol` hostname.
+
+```bash
+npm run db:generate -- --name=migration_name
+npm run db:migrate
+npm run db:studio
+npm run docker:down           # stop all Compose services, keeping volumes
+npm run docker:wipe           # deliberately delete ALL Compose data volumes
 ```
 
 ## Production
@@ -59,39 +103,40 @@ Set `DATABASE_URL`, `REDIS_URL`, and the `S3_*` variables to your managed servic
 can omit the S3 endpoint and static credentials to use the regional endpoint and IAM role. See
 [`.env.example`](.env.example) and [storage/README.md](storage/README.md).
 
-## Structured logs
+## Observability
 
-Server logs are redacted and written to standard output, pretty-printed in development and emitted
-as newline-delimited JSON in production. See [observability/README.md](observability/README.md) for
-the event contract, configuration, and logging policy.
+Server logs, request/job metrics, and distributed traces use OpenTelemetry. The Collector sends logs
+to Loki, cumulative metrics to Prometheus, and traces to Tempo. Grafana provisions all three data
+sources and links logs to traces in both directions. See [observability/README.md](observability/README.md)
+for signal flow, logging patterns, retention, and Explore queries.
 
 ## Checks
 
 ```bash
-npm test                       # critical auth and organization-boundary tests
-npm run check                  # format + typecheck + lint + tests (required pre-commit gate)
+npm test                       # unit tests; no Docker or external services
+npm run test:integration        # auth and organization-boundary tests with isolated Postgres
+npm run check                  # format + typecheck + lint + both test suites (required gate)
 ```
 
-`npm run check` formats the repository, then runs the `typecheck`, `lint`, and `test` scripts in
-sequence. It must pass before any change is considered done.
+`npm run check` formats the repository, then runs the `typecheck`, `lint`, `test`, and
+`test:integration` scripts in sequence. It must pass before any change is considered done.
 
-Tests automatically start the local Postgres service and use a separate `blueprint_test` database
-inside the same container. The test schema is reset and migrated on every run; the development
-database, Redis, and S3 are untouched. Postgres remains running after the tests so an existing
-development session is not interrupted.
+Unit tests cover rate limiting, logging, and telemetry using in-memory dependencies. Add unit tests
+as `test/**/*.test.ts`; use `*.integration.test.ts` for tests requiring a real database. Database
+cleanup runs only for integration tests.
+
+Integration tests use [test/compose.yml](test/compose.yml) to start a disposable Postgres container
+on `127.0.0.1:55433`, with its own Compose project and `blueprint_test` database. The runner resets
+and migrates the schema before testing, then removes the test container and its data on success or
+failure. These tests require Docker Compose with `up --wait` support but do not load the development
+Compose file or require `.env`. The development database, Redis, and S3 are untouched.
 
 ### Continuous integration
 
 A GitHub Actions workflow runs on every pull request and verifies changes with the typecheck, lint,
 formatting, and test commands similar to `npm run check` but without writing during the format check.
-
-## Project layout
-
-- [web/](web/) — React Router 8 SSR app. See [web/README.md](web/README.md) for routing, server boundary, validation, data access, and UI patterns.
-- [worker/](worker/) — BullMQ jobs + node-cron scheduler. See [worker/README.md](worker/README.md) for the job/scheduler templates.
-- [db/](db/) — Domain schema modules, generated migrations, repository functions. See [db/README.md](db/README.md) for the schema workflow and [db/repositories/README.md](db/repositories/README.md) for the repository template.
-- [mail/](mail/) — shared server-only email transport and templates. See [mail/README.md](mail/README.md) for the per-email worker pattern.
-- [storage/](storage/) — shared server-only S3 operations. See [storage/README.md](storage/README.md) for local and production setup.
+Unit and integration tests run as separate steps. Only the integration step starts Postgres, using
+the test-only Compose file; development Watch configuration is not involved.
 
 ## Conventions
 

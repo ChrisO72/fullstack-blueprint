@@ -26,3 +26,7 @@ provider timeout may result in a duplicate message on retry.
 Set `LETTERMINT_API_KEY`, `LETTERMINT_MAIL_FROM`, and `APP_URL`. If the Lettermint environment
 variables are set, the app can send emails. Email is used for account confirmation and password
 resets. `isEmailConfigured` reports whether both optional Lettermint variables are present.
+
+Email transport failures emit a sanitized OpenTelemetry error inside the worker’s active span.
+Recipients, bodies, tokens, and provider response contents are not logged. The dispatcher owns
+job completion/failure logs and retry metrics.
