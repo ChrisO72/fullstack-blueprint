@@ -1,0 +1,3 @@
+interface:
+  display_name: "Blueprint Code Review"
+  short_description: "Find concrete defects in implementation changes"

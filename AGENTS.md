@@ -6,9 +6,9 @@ needed for the task; a root-started session may not have loaded nested instructi
 
 ## Universal rules
 
-- Run `npm run check` before finishing changes. It is the only verification gate.
-- Never perform or plan runtime testing, start services, or trigger application requests for verification.
-  Leave runtime testing to the user.
+- Run `npm run check` before finishing changes. It is the standard verification gate.
+- Use `$blueprint-functional-review` for requested browser or CLI verification of running behavior.
+  Use a local or designated test environment and protect existing data and external integrations.
 - Do not silence the type checker: no `any`, `@ts-ignore`, or unjustified `eslint-disable`.
 - Keep credentials out of code, documentation, and logs.
 - Keep unit tests in the owning component's `test/` directory. Read that component's instructions
@@ -32,5 +32,13 @@ Read [code organization](docs/code-organization.md) when changing imports, share
 generated files, or environment ownership.
 
 For recorded errors, traces, or logs, read [telemetry/debugging.md](telemetry/debugging.md) and use
-the repository-local Sentry CLI with its read-only agent token. Reading evidence does not authorize
-running the application or triggering failures.
+the repository-local Sentry CLI with its read-only agent token.
+
+## Development workflow skills
+
+Repo-specific skills live in [.agents/skills/](.agents/skills/). Select the requested stage;
+an issue or review request does not automatically start implementation or the rest of the pipeline.
+Use `$blueprint-docs-sync` when handing off implementation changes to keep affected documentation
+in the same branch and PR. GitHub is the source of truth; each skill defines its own `gh` commands,
+publication destination, agent prefix, and Details format. See [the skill index](docs/agent-workflow.md)
+for inputs, outputs, and invocation examples.

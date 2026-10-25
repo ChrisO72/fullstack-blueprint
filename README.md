@@ -34,7 +34,8 @@ Cool stuff included: [TypeScript](https://www.typescriptlang.org/) | [React](htt
 ├── telemetry/           # Application monitoring and debugging
 │   └── sentry/          # Hosted provider setup, CLI, and artifact uploads
 ├── runtime/             # Shared environment loading and shutdown
-└── docs/                # Repository-wide development guides
+├── docs/                # Repository-wide development guides
+└── .agents/skills/      # Repository-specific development workflow skills
 ```
 
 ## First-time setup
@@ -101,5 +102,6 @@ Checks run locally. Component targets scope formatting, linting, and tests; type
 ## Development guides
 
 - [Code organization](docs/code-organization.md) — imports, server boundaries, generated files, and configuration ownership.
+- [Agent development workflow](docs/agent-workflow.md) — issue planning, reviews, implementation, functional verification, and documentation sync.
 - Component READMEs link to task-specific guides and production commands.
 - [Agent instructions](AGENTS.md) — repository rules and routing to scoped instructions.

@@ -1,0 +1,3 @@
+interface:
+  display_name: "Blueprint Plan Review"
+  short_description: "Review issue plans against the repository"
