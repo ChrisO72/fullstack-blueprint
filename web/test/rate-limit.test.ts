@@ -14,6 +14,7 @@ function testPolicies(limit = 1): AuthRateLimitPolicies {
     login: policy,
     signup: policy,
     "password-reset": policy,
+    "password-reset-complete": policy,
     resend: policy,
   };
 }

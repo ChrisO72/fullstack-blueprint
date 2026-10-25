@@ -25,4 +25,4 @@ COPY --from=build --chown=node:node /app/build/web ./build/web
 ENV NODE_ENV=production SENTRY_SERVICE=web
 ENV HOST=0.0.0.0 PORT=3000
 EXPOSE 3000
-CMD ["node", "--import", "./build/web/telemetry.js", "./node_modules/@react-router/serve/bin.cjs", "./build/web/server/index.js"]
+CMD ["node", "--enable-source-maps", "--import", "./build/web/telemetry.js", "./build/web/serve.js"]

@@ -1,4 +1,4 @@
-import { and, count, desc, eq, isNull } from "drizzle-orm";
+import { and, count, desc, eq, isNotNull, isNull, or } from "drizzle-orm";
 import { db } from "../db";
 import { type InsertFile, files } from "../schema/files";
 
@@ -12,6 +12,25 @@ export async function getFileById(id: number, organizationId: number) {
     .select()
     .from(files)
     .where(and(eq(files.id, id), eq(files.organizationId, organizationId), isNull(files.deletedAt)))
+    .limit(1);
+  return file ?? null;
+}
+
+// Worker cleanup must retain access to tombstones after their signed uploads expire.
+export async function getFileForCleanup(
+  id: number,
+  organizationId: number,
+): Promise<{ storageKey: string } | null> {
+  const [file] = await db
+    .select({ storageKey: files.storageKey })
+    .from(files)
+    .where(
+      and(
+        eq(files.id, id),
+        eq(files.organizationId, organizationId),
+        or(isNotNull(files.deletedAt), eq(files.status, "failed")),
+      ),
+    )
     .limit(1);
   return file ?? null;
 }

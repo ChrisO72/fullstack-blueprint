@@ -64,6 +64,6 @@ Register shared resource cleanup through [runtime/lifecycle.server.ts](../runtim
 [shutdown.server.ts](shutdown.server.ts) closes those resources before flushing Sentry.
 The web development adapter in [web/vite.ts](../web/vite.ts) drains Vite first.
 
-The [process controller](../runtime/process.server.ts) drains worker jobs on SIGINT/SIGTERM,
+The [process controller](../runtime/process.server.ts) drains production HTTP requests or worker jobs on SIGINT/SIGTERM,
 closes shared resources, and flushes Sentry within a 25-second deadline. Fatal process errors use
 the same shutdown path and exit nonzero. Preserve shared state across preloaded and bundled code.

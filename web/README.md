@@ -79,7 +79,9 @@ docker run -d --init --stop-timeout 30 -p 127.0.0.1:3000:3000 \
 ```
 
 Add `-e NAME` for optional integration settings when enabled. Web and worker must share the same
-database and queues. The production image listens on port 3000; hosting is supplied by the adopting project.
+database and queues. [server.ts](server.ts) serves the production app on `HOST`/`PORT`
+(defaults: `0.0.0.0:3000`), uses the scrubbed application request logs, and drains HTTP requests
+before shutdown. Hosting is supplied by the adopting project.
 
 ```bash
 npm run build:web             # Host build into build/web/

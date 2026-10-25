@@ -9,7 +9,12 @@ stores the user in `authenticatedUserContext`, and appends rotated cookies to th
 This covers loaders and actions without racing parallel matched loaders. Invalid sessions redirect
 to `/login`; deleted-user sessions also clear cookies.
 
+Refresh rotation is serialized in PostgreSQL. Parallel requests may reuse the previous token for
+10 seconds and receive the same replacement; logout revokes either token's session.
+
 Protected loaders and actions read the cached user with `getAuthenticatedUser(context)`.
+User queries return an explicit public field projection; only `getUserCredentialsByEmail`
+includes the password hash for server-side authentication.
 For admin-only routes, use `requireAdmin(context)`; non-admins redirect to `/`:
 
 ```ts
@@ -39,9 +44,10 @@ Public auth actions use Redis-backed fixed windows shared by every web instance:
 
 - Login: 10 requests per submitted email every 15 minutes.
 - Signup: 5 requests per submitted email per hour.
-- Password reset and confirmation resend: 3 requests per submitted email per hour.
+- Password-reset requests and confirmation resend: 3 requests per submitted email per hour.
+- Password-reset completion: 5 attempts per account every 15 minutes, after token validation.
 
-Counters use HMAC-pseudonymized submitted emails, expire with their window, return `429` with `Retry-After` when exceeded, and fail open if Redis is unavailable.
+Counters use HMAC-pseudonymized account identifiers, expire with their window, return `429` with `Retry-After` when exceeded, and fail open if Redis is unavailable.
 
 Use the [route template](routes.md#route-module-template) for loaders and actions. Read the
 [mail setup](../mail/README.md) when enabling account confirmation or password resets.

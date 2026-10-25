@@ -4,7 +4,8 @@ import Redis from "ioredis";
 import { env } from "~/env.server";
 import { log } from "~/telemetry/log.server";
 
-export type AuthRateLimitAction = "login" | "signup" | "password-reset" | "resend";
+export type AuthRateLimitAction =
+  "login" | "signup" | "password-reset" | "password-reset-complete" | "resend";
 
 type RateLimitRule = {
   limit: number;
@@ -41,6 +42,7 @@ export const AUTH_RATE_LIMIT_POLICIES: AuthRateLimitPolicies = {
   login: { limit: 10, windowSeconds: 15 * 60 },
   signup: { limit: 5, windowSeconds: 60 * 60 },
   "password-reset": { limit: 3, windowSeconds: 60 * 60 },
+  "password-reset-complete": { limit: 5, windowSeconds: 15 * 60 },
   resend: { limit: 3, windowSeconds: 60 * 60 },
 };
 

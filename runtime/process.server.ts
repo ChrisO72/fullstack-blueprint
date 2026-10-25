@@ -60,13 +60,12 @@ export function installProcessHandlers(worker: boolean) {
       void processController.stop(1);
     });
   }
-  // Vite owns development web signals; react-router-serve also closes its HTTP listener.
+  // Vite owns development web signals; production registers its HTTP drain on the controller.
   if (worker || process.env.NODE_ENV === "production") {
     for (const signal of ["SIGTERM", "SIGINT"] as const) {
       process.on(signal, () => {
         log.info("Application stopping", { reason: signal });
-        // Let the HTTP server's signal listener stop accepting requests first.
-        setImmediate(() => void processController.stop());
+        void processController.stop();
       });
     }
   }

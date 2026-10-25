@@ -1,4 +1,4 @@
-import { getFileById, markFileFailed } from "~/db/repositories/files";
+import { getFileForCleanup, markFileFailed } from "~/db/repositories/files";
 import { log } from "~/telemetry/log.server";
 import { deleteStoredFile } from "~/storage/objects.server";
 
@@ -11,18 +11,10 @@ export type ExpirePendingFileUploadJobData = {
 };
 
 export async function handleExpirePendingFileUploadJob(data: ExpirePendingFileUploadJobData) {
-  const claimedFile = await markFileFailed(data.fileId, data.organizationId);
+  await markFileFailed(data.fileId, data.organizationId);
+  const file = await getFileForCleanup(data.fileId, data.organizationId);
+  if (!file) return;
 
-  if (claimedFile) {
-    await deleteStoredFile(claimedFile.storageKey);
-    log.info("Pending upload expired", { fileId: data.fileId });
-    return;
-  }
-
-  const file = await getFileById(data.fileId, data.organizationId);
-  if (!file || file.status !== "failed") return;
-
-  // A retry may find the metadata already failed if object deletion previously threw.
   await deleteStoredFile(file.storageKey);
-  log.info("Failed upload removed", { fileId: data.fileId });
+  log.info("Upload object removed", { fileId: data.fileId });
 }
