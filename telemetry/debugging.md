@@ -4,10 +4,10 @@ Read this when investigating existing Sentry issues, logs, events, or traces.
 Set up the read-only agent token using [sentry/README.md](sentry/README.md#configuration).
 Run commands from the repository root.
 
-Use `npm run sentry -- <command>`: it selects the local instance and read-only agent token,
+Use `npm run sentry -- <command>`: it selects hosted Sentry and the read-only agent token,
 keeps CLI state under `telemetry/sentry/.local/cli/`, and does not pass the artifact-upload token to the CLI.
-No global install or cloud Sentry account is needed. Credentials require a user account on the local
-instance. The wrapper also supports `SENTRY_URL`, `SENTRY_ORG`, and `SENTRY_PROJECT` overrides.
+No global install is needed. Configure `SENTRY_ORG` and `SENTRY_PROJECT` with your hosted slugs.
+The endpoint defaults to `https://sentry.io`; `SENTRY_URL` optionally overrides it.
 
 ```bash
 npm run sentry -- issue list                 # Find existing issues

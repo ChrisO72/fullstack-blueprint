@@ -29,7 +29,7 @@ addresses. Optional integrations: [mail](../mail/README.md#configuration),
 ### Docker
 
 ```bash
-docker compose up --build --watch worker # Worker + infrastructure and migrations; no web or Sentry
+docker compose up --build --watch worker # Worker + infrastructure and migrations; no web
 # In another terminal:
 docker compose stop worker              # Stop only worker; leave infrastructure running
 # After leaving the foreground command:
@@ -37,9 +37,8 @@ npm run docker:down                     # Remove application containers; retain 
 ```
 
 Compose Watch restarts the worker on source changes and rebuilds on dependency/build-file changes.
-Restart after editing `.env`, Compose configuration, or migrations. Leave Sentry DSNs empty for
-this standalone workflow; use the [whole-app workflow](../README.md#run-the-whole-app) for local
-Sentry ingestion in Docker.
+Restart after editing `.env`, Compose configuration, or migrations. Optional hosted Sentry reporting
+uses the configured DSN.
 
 ### Host
 
@@ -51,7 +50,7 @@ npm run docker:down           # After stopping worker: remove app containers, re
 ```
 
 Use one worker workflow at a time to avoid duplicate workers and schedules. Host commands read
-root `.env`. Start [Sentry](../telemetry/sentry/README.md#run-locally) separately for host telemetry.
+root `.env`; the same hosted [Sentry configuration](../telemetry/README.md#configuration) works in both workflows.
 
 ## Production
 

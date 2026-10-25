@@ -28,8 +28,11 @@ If a page visits a URL needing redaction (including query strings, fragments, an
 that replay segment and subsequent segments until a full page reload are dropped because the SDK's
 compressed DOM metadata cannot be safely rewritten by its hooks. Error and trace reporting continues.
 
-Local trace and replay sample rates default to 1. Configure the `SENTRY_*_SAMPLE_RATE` values for
-other environments. Application SDK initialization is disabled during tests. Request/job metrics are:
+Trace and ordinary replay sample rates default to 1 in development and 0.2 when
+`NODE_ENV=production`; error-triggered replay sampling defaults to 1 in both. Explicit
+`SENTRY_*_SAMPLE_RATE` values override these defaults, including 0. `SENTRY_ENVIRONMENT` labels
+events without changing sampling. Error events retain full sampling subject to existing filters
+and provider limits. Application SDK initialization is disabled during tests. Request/job metrics are:
 
 - `http.server.requests`: counter by method, matched route, status.
 - `http.server.request.duration`: distribution in seconds with the same attributes.

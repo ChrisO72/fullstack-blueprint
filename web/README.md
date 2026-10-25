@@ -32,7 +32,7 @@ and [telemetry](../telemetry/README.md#configuration). Mail enables account conf
 ### Docker
 
 ```bash
-docker compose up --build --watch web # Web + infrastructure and migrations; no worker or Sentry
+docker compose up --build --watch web # Web + infrastructure and migrations; no worker
 # In another terminal:
 docker compose stop web              # Stop only web; leave infrastructure running
 # After leaving the foreground command:
@@ -41,8 +41,7 @@ npm run docker:down                  # Remove the application containers; retain
 
 Open <http://localhost:5173>. Compose Watch provides HMR and restarts telemetry, runtime, and
 startup changes. Dependency and build-file changes rebuild the image; restart after changing
-`.env`, Compose configuration, or migrations. Leave Sentry DSNs empty for this standalone workflow;
-use the [whole-app workflow](../README.md#run-the-whole-app) for local Sentry ingestion in Docker.
+`.env`, Compose configuration, or migrations. Optional hosted Sentry reporting uses the configured DSNs.
 Background jobs wait until a [worker](../worker/README.md) runs.
 
 ### Host
@@ -54,8 +53,8 @@ npm run dev:web               # Start web at http://localhost:5173; Ctrl+C stops
 npm run docker:down           # After stopping web: remove app containers, retain data
 ```
 
-Run either Docker web or host web to avoid a port collision. For host telemetry, start
-[Sentry](../telemetry/sentry/README.md#run-locally) separately. Host commands read root `.env`.
+Run either Docker web or host web to avoid a port collision. Host commands read root `.env`;
+the same hosted [Sentry configuration](../telemetry/README.md#configuration) works in both workflows.
 
 ## Production
 

@@ -42,4 +42,5 @@ optional-value handling live in [runtime/env.server.ts](../runtime/env.server.ts
 [runtime/config.ts](../runtime/config.ts).
 
 Mail and storage are shared integrations, not additional application processes. Agent and
-source-map tokens are host-tool-only. Sentry's provider secrets stay under `telemetry/sentry/.local/`.
+source-map tokens are host-tool-only environment settings. Sentry CLI state stays under ignored
+`telemetry/sentry/.local/`; it is excluded from application images and Compose Watch.
