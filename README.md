@@ -1,10 +1,10 @@
 # Web App Blueprint
 
-A TypeScript web application with React Router, PostgreSQL, Redis, background jobs, email,
-private file storage, and Sentry observability.
+A battle tested template for a complete web application.
+Each part of the app has its own dedicated README file for more info.
 
-This README runs the whole app. For running, configuring, or building an individual service,
-use its local README. All commands run from the repository root.
+Cool stuff included: [TypeScript](https://www.typescriptlang.org/) | [React](https://react.dev/) | [React Router](https://reactrouter.com/) | [PostgreSQL](https://www.postgresql.org/) | [Redis](https://redis.io/) | [Vite](https://vite.dev/) | [Tailwind CSS](https://tailwindcss.com/) | [Drizzle ORM](https://orm.drizzle.team/) | [BullMQ](https://bullmq.io/) | [Headless UI](https://headlessui.com/) | [Motion](https://motion.dev/) | [Zod](https://zod.dev/) | [Heroicons](https://heroicons.com/) | [Lettermint](https://lettermint.co/)
+
 
 | Component                            | Purpose and setup                    |
 | ------------------------------------ | ------------------------------------ |
@@ -16,7 +16,32 @@ use its local README. All commands run from the repository root.
 | [Telemetry](telemetry/README.md)     | Application monitoring and debugging |
 | [Sentry](telemetry/sentry/README.md) | Local monitoring stack               |
 
+```text
+├── web/                 # React Router app, UI + server routes
+│   ├── components/
+│   ├── lib/
+│   ├── public/
+│   ├── routes/
+│   └── test/            # Web unit tests
+├── worker/              # Background jobs and scheduled tasks
+│   ├── jobs/
+│   └── schedules/
+├── db/                  # PostgreSQL database with Drizzle ORM
+│   ├── schema/
+│   ├── repositories/
+│   └── drizzle/
+├── mail/                # Email sending and templates
+├── storage/             # Private S3 file storage
+├── telemetry/           # Application monitoring and debugging
+│   └── sentry/          # Provider stack, CLI, and artifact uploads
+├── runtime/             # Shared environment loading and shutdown
+└── docs/                # Repository-wide development guides
+```
+
 ## First-time setup
+
+This README runs the whole app. For running, configuring, or building an individual service,
+use its local README. All commands run from the repository root.
 
 Requires Node 24+, Git, Make, Docker, and Docker Compose **2.32.2+**.
 `make dev` requires the one-time [Sentry installation](telemetry/sentry/README.md#run-locally),
@@ -25,14 +50,9 @@ including its CPU, memory, and disk requirements.
 ```bash
 npm ci                       # Install host tools and dependencies
 cp .env.example .env         # Create the single local configuration file
-# Generate a different value for each of the three secrets below.
-node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
 ```
 
-Replace `JWT_SECRET`, `REFRESH_SECRET`, and `RATE_LIMIT_KEY_SECRET` in `.env` with generated values.
-The remaining local defaults are documented in [.env.example](.env.example). Mail is optional;
-configure its provider to enable account confirmation and password resets. Finish the Sentry
-installation and DSN setup before starting the whole app.
+Configure all the variables, defaults and requirements are documented in [.env.example](.env.example). You can also check service specific README's for more info.
 
 ## Run the whole app
 
@@ -83,6 +103,9 @@ npm run check                # Format, typecheck, lint, and unit tests; required
 
 The gate requires no Docker or external services. CI runs the corresponding checks with
 non-writing formatting validation. Runtime testing is left to the user.
+
+Unit tests live in each component's `test/` directory and run together through the root gate.
+Keep the suite small and focused on application behavior; add coverage as the app grows.
 
 ## Development guides
 

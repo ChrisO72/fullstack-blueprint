@@ -11,6 +11,10 @@ needed for the task; a root-started session may not have loaded nested instructi
   Leave runtime testing to the user.
 - Do not silence the type checker: no `any`, `@ts-ignore`, or unjustified `eslint-disable`.
 - Keep credentials out of code, documentation, and logs.
+- Keep unit tests in the owning component's `test/` directory. Read that component's instructions
+  and relevant guide before changing coverage.
+- Keep coverage minimal and focused on application behavior. Use in-memory dependencies;
+  tests must not require application services, Docker, or external providers.
 
 ## Read when relevant
 
@@ -23,7 +27,6 @@ needed for the task; a root-started session may not have loaded nested instructi
 | File storage                        | [storage/AGENTS.md](storage/AGENTS.md)     |
 | Monitoring or Sentry tooling        | [telemetry/AGENTS.md](telemetry/AGENTS.md) |
 | Shared environment or shutdown      | [runtime/AGENTS.md](runtime/AGENTS.md)     |
-| Unit tests                          | [test/AGENTS.md](test/AGENTS.md)           |
 
 Read [code organization](docs/code-organization.md) when changing imports, shared boundaries,
 generated files, or environment ownership.

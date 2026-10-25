@@ -29,8 +29,7 @@ that replay segment and subsequent segments until a full page reload are dropped
 compressed DOM metadata cannot be safely rewritten by its hooks. Error and trace reporting continues.
 
 Local trace and replay sample rates default to 1. Configure the `SENTRY_*_SAMPLE_RATE` values for
-other environments. Application SDK initialization is disabled during tests; focused SDK unit tests
-use an in-memory transport with instrumentation disabled. Request/job metrics are:
+other environments. Application SDK initialization is disabled during tests. Request/job metrics are:
 
 - `http.server.requests`: counter by method, matched route, status.
 - `http.server.request.duration`: distribution in seconds with the same attributes.

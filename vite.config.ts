@@ -44,7 +44,7 @@ export default defineConfig((configEnv) => ({
     ],
   },
   test: {
-    include: ["test/**/*.test.ts"],
+    include: ["*/test/**/*.test.{ts,tsx}"],
     // Satisfy environment validation; unit tests use in-memory dependencies.
     env: {
       NODE_ENV: "test",
