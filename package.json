@@ -23,7 +23,7 @@
     "typecheck": "react-router typegen && tsc",
     "lint": "eslint .",
     "check": "npm run format && npm run typecheck && npm run lint && npm test",
-    "docker:up": "docker compose up -d database redis storage storage-init",
+    "docker:up": "docker compose up -d --wait database redis storage",
     "docker:down": "docker compose down --remove-orphans",
     "docker:wipe": "docker compose down -v --remove-orphans",
     "format": "npx prettier . --write",

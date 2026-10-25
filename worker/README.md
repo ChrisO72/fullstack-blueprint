@@ -43,7 +43,7 @@ uses the configured DSN.
 ### Host
 
 ```bash
-npm run docker:up             # Start database, Redis, MinIO, and bucket initialization
+npm run docker:up             # Wait for database, Redis, and SeaweedFS with its private bucket
 npm run db:migrate            # Apply migrations
 npm run dev:worker            # Start the worker; Ctrl+C stops it
 npm run docker:down           # After stopping worker: remove app containers, retain data

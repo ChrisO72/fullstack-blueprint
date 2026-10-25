@@ -5,15 +5,15 @@ Each part of the app has its own dedicated README file for more info.
 
 Cool stuff included: [TypeScript](https://www.typescriptlang.org/) | [React](https://react.dev/) | [React Router](https://reactrouter.com/) | [PostgreSQL](https://www.postgresql.org/) | [Redis](https://redis.io/) | [Vite](https://vite.dev/) | [Tailwind CSS](https://tailwindcss.com/) | [Drizzle ORM](https://orm.drizzle.team/) | [BullMQ](https://bullmq.io/) | [Headless UI](https://headlessui.com/) | [Motion](https://motion.dev/) | [Zod](https://zod.dev/) | [Heroicons](https://heroicons.com/) | [Lettermint](https://lettermint.co/)
 
-| Component                            | Purpose and setup                    |
-| ------------------------------------ | ------------------------------------ |
-| [Web](web/README.md)                 | React Router UI and server routes    |
-| [Worker](worker/README.md)           | BullMQ jobs and scheduled tasks      |
-| [Database](db/README.md)             | PostgreSQL, Drizzle, and migrations  |
-| [Mail](mail/README.md)               | Lettermint email delivery            |
-| [Storage](storage/README.md)         | Private S3 storage and local MinIO   |
-| [Telemetry](telemetry/README.md)     | Application monitoring and debugging |
-| [Sentry](telemetry/sentry/README.md) | Hosted monitoring setup and tooling  |
+| Component                            | Purpose and setup                      |
+| ------------------------------------ | -------------------------------------- |
+| [Web](web/README.md)                 | React Router UI and server routes      |
+| [Worker](worker/README.md)           | BullMQ jobs and scheduled tasks        |
+| [Database](db/README.md)             | PostgreSQL, Drizzle, and migrations    |
+| [Mail](mail/README.md)               | Lettermint email delivery              |
+| [Storage](storage/README.md)         | Private S3 storage and local SeaweedFS |
+| [Telemetry](telemetry/README.md)     | Application monitoring and debugging   |
+| [Sentry](telemetry/sentry/README.md) | Hosted monitoring setup and tooling    |
 
 ```text
 ├── web/                 # React Router app, UI + server routes
@@ -57,7 +57,7 @@ These integrations are optional. Check each README for configuration instruction
 
 - **Email:** enable account confirmation and password-reset emails with Lettermint, or leave its
   settings empty. See the [Mail README](mail/README.md#configuration).
-- **File storage:** enable file uploads with S3; local MinIO defaults are already included.
+- **File storage:** enable file uploads with S3; local SeaweedFS defaults are already included.
   See the [Storage README](storage/README.md#configuration).
 - **Monitoring:** enable hosted Sentry reporting, or leave both DSN fields empty to disable it.
   See the [Sentry README](telemetry/sentry/README.md#setup).
@@ -72,15 +72,16 @@ make reload                  # Apply .env and migration changes, then resume wat
 
 `make dev` runs Compose in watch mode: code changes reload the related containers or trigger Vite HMR.
 
-This starts web, worker, PostgreSQL, Redis, and MinIO. Database migrations and
-private bucket initialization must succeed before web and worker start.
+This starts web, worker, PostgreSQL, Redis, and SeaweedFS. SeaweedFS creates the private bucket
+automatically. Database migrations must succeed and storage must pass its authenticated bucket
+healthcheck before web and worker start.
 
-| Service             | Local address                                     |
-| ------------------- | ------------------------------------------------- |
-| Web                 | <http://localhost:5173>                           |
-| MinIO API / console | <http://localhost:9000> / <http://localhost:9001> |
-| PostgreSQL          | `127.0.0.1:55432`                                 |
-| Redis               | `127.0.0.1:6379`                                  |
+| Service          | Local address           |
+| ---------------- | ----------------------- |
+| Web              | <http://localhost:5173> |
+| SeaweedFS S3 API | <http://127.0.0.1:8333> |
+| PostgreSQL       | `127.0.0.1:55432`       |
+| Redis            | `127.0.0.1:6379`        |
 
 ## Checks
 

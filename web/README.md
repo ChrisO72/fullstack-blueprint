@@ -47,7 +47,7 @@ Background jobs wait until a [worker](../worker/README.md) runs.
 ### Host
 
 ```bash
-npm run docker:up             # Start database, Redis, MinIO, and bucket initialization
+npm run docker:up             # Wait for database, Redis, and SeaweedFS with its private bucket
 npm run db:migrate            # Apply migrations
 npm run dev:web               # Start web at http://localhost:5173; Ctrl+C stops it
 npm run docker:down           # After stopping web: remove app containers, retain data
