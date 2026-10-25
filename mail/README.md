@@ -21,12 +21,15 @@ Keep queue payloads limited to the values needed to render the message. Configur
 backoff, retention, and a stable job ID in the enqueue helper. Email delivery is at least once, so a
 provider timeout may result in a duplicate message on retry.
 
+Mail is shared application code using a third-party provider; it has no container of its own.
+Configuration is validated by this component, independently of web authentication configuration.
+
 ## Configuration
 
 Set `LETTERMINT_API_KEY`, `LETTERMINT_MAIL_FROM`, and `APP_URL`. If the Lettermint environment
 variables are set, the app can send emails. Email is used for account confirmation and password
 resets. `isEmailConfigured` reports whether both optional Lettermint variables are present.
 
-Email transport failures emit a sanitized OpenTelemetry error inside the worker’s active span.
+Email transport failures emit a Sentry warning inside the worker’s active span.
 Recipients, bodies, tokens, and provider response contents are not logged. The dispatcher owns
-job completion/failure logs and retry metrics.
+exception capture, job completion/failure logs, and retry metrics.

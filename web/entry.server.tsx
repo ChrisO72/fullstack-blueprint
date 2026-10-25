@@ -3,32 +3,23 @@ import { createReadableStreamFromReadable } from "@react-router/node";
 import { isbot } from "isbot";
 import type { RenderToPipeableStreamOptions } from "react-dom/server";
 import { renderToPipeableStream } from "react-dom/server";
-import {
-  isRouteErrorResponse,
-  ServerRouter,
-  type EntryContext,
-  type HandleErrorFunction,
-} from "react-router";
+import { ServerRouter, type EntryContext, type HandleErrorFunction } from "react-router";
 import { log } from "~/telemetry/log.server";
+import { getMetaTagTransformer, wrapSentryHandleRequest } from "@sentry/react-router";
+import { shouldReportRequestError } from "~/telemetry/http.server";
 export { instrumentations } from "~/telemetry/http.server";
 
 export const streamTimeout = 5_000;
 
 export const handleError: HandleErrorFunction = (error, { request }) => {
-  if (
-    request.signal.aborted ||
-    (isRouteErrorResponse(error) && error.status < 500) ||
-    (error instanceof Response && error.status < 500)
-  ) {
-    return;
-  }
+  if (!shouldReportRequestError(error, request.signal.aborted)) return;
 
   log.error("Unhandled request error", error, {
     "http.request.method": request.method,
   });
 };
 
-export default function handleRequest(
+function handleRequest(
   request: Request,
   responseStatusCode: number,
   responseHeaders: Headers,
@@ -67,7 +58,7 @@ export default function handleRequest(
           const stream = createReadableStreamFromReadable(body);
 
           responseHeaders.set("Content-Type", "text/html");
-          pipe(body);
+          pipe(getMetaTagTransformer(body));
 
           resolve(
             new Response(stream, {
@@ -81,7 +72,7 @@ export default function handleRequest(
         },
         onError(error: unknown) {
           responseStatusCode = 500;
-          if (shellRendered) {
+          if (shellRendered && shouldReportRequestError(error, request.signal.aborted)) {
             log.error("Streaming render failed", error, {
               "http.request.method": request.method,
             });
@@ -91,3 +82,7 @@ export default function handleRequest(
     );
   });
 }
+
+export default wrapSentryHandleRequest(async (...args) =>
+  handleRequest(args[0], args[1], args[2], args[3]),
+);

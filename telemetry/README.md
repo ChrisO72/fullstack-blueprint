@@ -1,134 +1,158 @@
 # Telemetry
 
-`make dev` starts the local stack. Grafana is at <http://localhost:3000>, with `admin` / `admin`
-by default (`GRAFANA_ADMIN_USER` / `GRAFANA_ADMIN_PASSWORD` in `.env` configure the initial login).
-Its named volume preserves login settings. Web and worker send OTLP/HTTP protobuf to the internal
-Collector; no telemetry backend ports are published.
+Application instrumentation, redaction, queue context, release identity, and shared build helpers
+live here. Provider-specific hosting and tooling live under [sentry/](sentry/).
+`stack.sh setup|up|down` delegates to that provider's shell entry point. Shell entry points work
+from any directory; they manage Docker on the host, not from inside a container.
 
-```text
-web / worker -- OTLP HTTP :4318 --> otelcol
-                                    |-- logs --> Loki /otlp/v1/logs
-                                    |-- cumulative metrics --> Prometheus /api/v1/otlp/v1/metrics
-                                    `-- traces --> Tempo /v1/traces
-Grafana Explore ------------------> Loki / Prometheus / Tempo
-```
+Browser, web server, and worker share Sentry project `blueprint/blueprint`, distinguished by
+`service` and `runtime` tags. JavaScript SDKs are pinned to 11.2.0 and the upstream self-hosted stack
+to 26.10.0. Web and worker own their builds and startup commands.
 
-## Local storage and configuration
+## One-time local installation
 
-Images are pinned in [compose.yml](../compose.yml): Collector 0.162.0, Loki 3.7.8, Prometheus 3.15.0,
-Tempo 3.1.0, and Grafana 13.2.4. Configuration lives in [config/](config/). Prometheus, Loki, and
-Tempo retain approximately three days of data; cleanup is asynchronous. Named volumes persist
-metrics, Loki chunks/index/compactor markers, Tempo blocks/WAL, and Grafana configuration.
-`make down` keeps them; the existing `npm run docker:wipe` deletes all Compose data.
+Install Node 24+, Git, Docker, and Docker Compose 2.32.2 or newer. Allocate the resources required
+by the upstream installer (at least 4 CPU cores, 16 GB memory, and 20 GB free disk; see the
+[upstream requirements](https://develop.sentry.dev/self-hosted/)). The installer performs its own
+platform/resource checks; the repository does not bypass them.
 
-The Collector uses `memory_limiter` before `batch`, with bounded in-memory exporter queues/retries.
-There is no durable Collector queue: telemetry can be lost on failure/restart. This is a minimal
-local environment, without dashboards, alerts, metrics generation, Kafka, or infrastructure exporters.
-Prometheus keeps its self-scrape and receives cumulative OTLP metrics; no delta conversion is needed.
-Loki indexes only service name, namespace, and environment. Trace/span IDs, hashed job IDs, and
-process instance IDs remain structured metadata. Tempo runs monolithically with local storage.
+1. Run `npm ci`, copy `.env.example` to `.env`, and configure application secrets.
+2. Run `make telemetry-setup`. It clones the pinned distribution into `telemetry/sentry/.local/self-hosted/`,
+   creates the ingress network, generates local configuration, runs the official installer, and
+   starts Sentry. Create the administrator when prompted. Installation reports are not sent upstream.
+3. Open <http://localhost:9090>, sign in, and create organization `blueprint` and project `blueprint`
+   using the React Router platform. Use the SDK configuration in this repository; do not run a wizard.
+4. In the project's Client Keys (DSN), copy the DSN into **both** `SENTRY_DSN` and
+   `SENTRY_PUBLIC_DSN` in `.env`. It should look like `http://PUBLIC_KEY@localhost:9090/PROJECT_ID`.
+5. Create a personal token with `org:read`, `project:read`, `team:read`, and `event:read` for
+   `SENTRY_AGENT_TOKEN`. Create a separate artifact-upload token with `org:read` and
+   `project:releases` for `SENTRY_UPLOAD_TOKEN`. Keep both in `.env`; they are never embedded in HTML.
 
-Configuration changes take effect after stopping and rerunning `make dev`. Reference projects in
-the parent Workshop directory are not used or modified by this stack.
+The upstream stack uses its own fixed `sentry-*` external volumes. Setup refuses to adopt volumes
+from another installation. Use a separate Docker context if you already host Sentry on this engine.
+A failed first installation can be rerun in the same checkout. Do not delete its ownership marker
+or change its pinned checkout to upgrade it implicitly.
 
-## Application initialization
-
-[register.server.ts](register.server.ts) is preloaded once before application imports. The ESM
-instrumentation hook patches supported dependencies; Vite externalizes the APIs and instrumented
-dependencies. `--conditions=development` prevents React Router’s dev CLI from relaunching without
-the preload flags. SDK setup stays outside HMR; Compose restarts both app processes when files in
-this directory change.
+## Daily commands
 
 ```sh
-node --experimental-loader=@opentelemetry/instrumentation/hook.mjs \
-  --import tsx --import ./telemetry/register.server.ts worker/index.ts
+make dev             # start Sentry, then app Compose Watch
+make down            # stop both projects; retain volumes
+make telemetry-up       # start only Sentry
+make telemetry-down     # stop only Sentry; retain volumes
 ```
 
-The stable SDK packages use 2.12.0 and the experimental logging/Node/exporter packages use 0.223.0.
-The logs SDK remains experimental and is isolated behind [log.server.ts](log.server.ts).
-The bootstrap explicitly constructs sanitizing trace and log processors; exporter endpoints and
-metric readers use standard OpenTelemetry environment configuration. Compose sets service names,
-cumulative temporality, five-second metric exports, and W3C trace-context propagation. Resource
-attributes include the `blueprint` namespace, environment, and a new UUID per process.
+`make dev` requires the one-time setup. Application processes still work without DSNs (console
+logging, no remote SDK) and continue serving if Sentry becomes unavailable. `npm run dev` is the
+host-process alternative; start Sentry separately with `make telemetry-up` when using it.
 
-Without `OTEL_EXPORTER_OTLP_ENDPOINT`, logs use OpenTelemetry’s console exporter, and remote metrics
-and traces are disabled. `NODE_ENV=test` or `OTEL_SDK_DISABLED=true` skips SDK initialization.
-Instrumentation covers PostgreSQL, ioredis, outgoing Node HTTP, and fetch/Undici. Incoming HTTP
-auto-spans are disabled because React Router owns the server span. PostgreSQL/Redis require a
-parent span. SDK export failures are diagnostic failures and do not change job/request outcomes.
+The Sentry-owned `compose.app.yml` overlay adds the ingress network and internal ingestion origin
+for `make dev`. Base application Compose has no dependency on that network. Only ingress is shared between projects. Browser and host processes use `localhost:9090`; app
+containers rewrite the server DSN host to `sentry-ingest` through `SENTRY_INGEST_ORIGIN`.
+Browser DSNs are never rewritten. Sentry databases remain on its private network. Loopback ports
+9000 and 9001 remain reserved for application storage. `npm run docker:down` and `docker:wipe`
+manage the application project only.
 
-## Logging and data policy
+Event retention is three days; upstream cleanup is asynchronous and individual signal retention
+can differ. `telemetry/sentry/.local/` contains credentials and installed upstream sources and is excluded from
+Git, builds, Compose Watch, formatting, linting, and TypeScript. Upgrades require an explicit
+version/configuration change and the upstream upgrade procedure; daily startup never upgrades.
 
-Use ordinary messages and bounded attributes inside the active span:
+## Signals and data policy
 
-```typescript
-import { log } from "~/telemetry/log.server";
+Server and worker instrumentation is preloaded before dependencies and lives outside HMR.
+PostgreSQL, Redis, HTTP, and fetch use Sentry's SDK integrations. React Router owns route-level
+tracing, including loaders, actions, middleware, and streaming error reporting.
 
-log.info("Upload completed", { fileId: file.id });
-log.error("Upload failed", error, { fileId: file.id });
+Queues carry Sentry trace context in BullMQ metadata. Legacy W3C-only metadata, invalid JSON,
+invalid trace headers, or `omitContext` starts a new consumer trace without dropping the job.
+Each attempt uses its own scope. Retries preserve the original error and application behavior.
+
+Use `log.info`/`log.warn` from `~/telemetry/log.server` for server/worker structured logs.
+Use `log.error(message, error, fields)` at the boundary that handles a failure; it captures an
+exception as well as a log. A helper that rethrows should add context and let its caller capture.
+Browser code uses `@sentry/react-router` directly. Avoid raw payloads in messages or attributes.
+
+We retain scrubbed messages, exception chains, stack frames, and source locations. SDK collection
+of cookies, headers, bodies, database parameters, queue payloads, user info, and local variables is
+disabled. Outgoing hooks also scrub credential patterns, email addresses, and sensitive URLs;
+only approved scalar attributes survive. SQL text is omitted from spans. This is not a guarantee
+that arbitrary secrets hidden in free-form text can be recognized: never deliberately log them.
+Replay masks all text/inputs, blocks media, and excludes request/response bodies.
+If a page visits a URL needing redaction (including query strings, fragments, and token paths),
+that replay segment and subsequent segments until a full page reload are dropped because the SDK's
+compressed DOM metadata cannot be safely rewritten by its hooks. Error and trace reporting continues.
+
+Local trace and replay sample rates default to 1. Configure the `SENTRY_*_SAMPLE_RATE` values for
+other environments. Application SDK initialization is disabled during tests; focused SDK unit tests
+use an in-memory transport with instrumentation disabled. Request/job metrics are:
+
+- `http.server.requests`: counter by method, matched route, status.
+- `http.server.request.duration`: distribution in seconds with the same attributes.
+- `job.attempts`: counter by job name and outcome.
+- `job.duration`: distribution in seconds with the same attributes.
+
+## Source maps and releases
+
+```sh
+npm run build          # source maps and debug IDs; no upload credentials required
+npm run sentry:upload  # upload that build explicitly, using SENTRY_UPLOAD_TOKEN
 ```
 
-Trace/span IDs are attached by OpenTelemetry, without a custom context store or request-ID header.
-The helper only exports allowlisted attributes. Do not pass payloads, credentials, headers, mail
-content, or raw URLs. Error messages and stacks are deliberately omitted because drivers and
-providers can include SQL, payloads, and tokens. Exception records retain a safe error type and
-a generic message. Span export drops `db.statement`, `db.query.text`, URL components, unapproved
-attributes, event details, and status descriptions. Redis spans retain only the command name.
-Existing job IDs can contain authentication tokens, so telemetry uses a stable SHA-256-derived ID.
+Uploads include browser/server output, worker, and the SDK preload. Upload failures fail the command.
+Debug IDs are injected before the artifacts are deployed; upload does not rewrite running artifacts.
+Each build stages uploadable pairs in `build/<service>/sentry-artifacts/` and removes browser
+`.map` files from `build/web/client/`. Keep artifact directories private. The default upload command
+processes both builds; `npm run sentry:upload -- web` or `-- worker` selects one. For container builds,
+extract the service's build directory from its image into the corresponding host `build/` location
+before uploading. Upload the exact artifacts shipped in that image, not a separate rebuild.
 
-React Router instrumentation inspects `status`, `error`, and `statusCode`, renames spans with the
-matched route pattern, and records counts/durations in seconds. It also preserves SSR streaming
-error logs; handler duration ends at response creation, not the end of streaming.
+Set the same `SENTRY_RELEASE` build argument for both production images. Host `npm run build`
+resolves one identifier and passes it to both builds. Individual host builds derive
+`blueprint@<git-sha>` (with `-dirty` for working changes) unless explicitly supplied; container builds
+default to `blueprint@local`. Each build writes `build/<service>/release.json`; production startup
+reads that identifier without Git. An explicit runtime `SENTRY_RELEASE` overrides it and must match
+the uploaded artifacts. `make dev` passes a host-derived identifier into both containers.
+SDK configuration changes require a restart.
 
-Queue enqueueing creates a producer span. W3C context is injected into `telemetry.metadata`, then
-extracted into a consumer span for each processing attempt. Only string `traceparent` and
-`tracestate` fields are accepted; malformed/old metadata starts a new trace. `omitContext` is
-respected. Attempts emit completion/failure logs before ending their span; errors are rethrown
-unchanged so BullMQ retry behavior stays intact.
+Vite development code changes through HMR and is not an immutable uploaded build. Agents should
+match reported source filenames against the current checkout and account for edits made after an
+event. Uploaded source context describes its build, not subsequent working-tree changes. GitHub
+suspect-commit integration, profiling, and hosted Seer are not configured.
 
-Web dev shutdown drains Vite’s HTTP server, then shared resources, then the SDK. Worker shutdown
-drains BullMQ first. Both have a 25-second deadline within the 30-second Compose grace period.
+## Agent debugging
 
-## Grafana Explore
+Use `npm run sentry -- <command>`: it selects the local instance and read-only agent token,
+keeps CLI state under `telemetry/sentry/.local/cli/`, and does not pass the artifact-upload token to the CLI.
+No global install or cloud Sentry account is needed. Credentials require a user account on the local
+instance. The wrapper also supports `SENTRY_URL`, `SENTRY_ORG`, and `SENTRY_PROJECT` overrides.
 
-Select the provisioned data source and use a recent time range. Data appears as the app is used;
-no sample traffic or runtime ingestion checks are part of the implementation gate.
-
-Loki (LogQL):
-
-```logql
-{service_name="web"}
-{service_name="worker"} | severity_text = "ERROR"
-{service_name="web"} | trace_id = "<trace ID>"
+```sh
+npm run sentry -- issue list
+npm run sentry -- issue view BLUEPRINT-1
+npm run sentry -- event --help
+npm run sentry -- trace --help
+npm run sentry -- explore --help
+npm run sentry -- schema --search events
 ```
 
-Expand a log’s details and follow `TraceID` to Tempo. From a Tempo span, the logs link filters
-Loki’s `trace_id` structured metadata within the span’s time window; no JSON/message parsing is
-needed. Resource `service.name` is mapped to Loki’s `service_name` label.
+Start with recent issues filtered to the relevant environment and service. Inspect an event's
+exception chain and original stack frames, follow its trace ID into the request and queue spans,
+and query logs in that time window. Use the CLI's `--help` for filters and JSON output. Compare the
+reported release with the current checkout before treating a source line as current. An error log
+alone is not proof that an exception event was captured; inspect the actual event.
 
-Prometheus (PromQL):
+These commands read previously recorded evidence. They do not authorize running the application,
+triggering failures, or performing runtime tests. `npm run check` is the only implementation gate;
+it uses in-memory dependencies and requires neither Docker nor a Sentry instance.
 
-```promql
-sum by (http_route) (rate(http_server_requests_total{service_name="web"}[5m]))
-histogram_quantile(0.95, sum by (le, http_route) (rate(http_server_request_duration_seconds_bucket{service_name="web"}[5m])))
-sum by (job_name, outcome) (rate(job_attempts_total{service_name="worker"}[5m]))
-```
+## Application environment
 
-Tempo (TraceQL):
+All Sentry variables are optional. Set `SENTRY_DSN` for server/worker transport and
+`SENTRY_PUBLIC_DSN` for the browser. `SENTRY_ENVIRONMENT`, `SENTRY_TRACES_SAMPLE_RATE`,
+`SENTRY_REPLAYS_SESSION_SAMPLE_RATE`, and `SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE` control labels
+and sampling. `SENTRY_SERVICE` is set by the web/worker commands and images. The development overlay
+sets `SENTRY_INGEST_ORIGIN` for internal server routing; host processes use the DSN unchanged.
 
-```traceql
-{ resource.service.name = "web" }
-{ resource.service.name = "worker" && status = error }
-```
-
-## Upstream patterns
-
-- [OpenTelemetry Node SDK and initialization](https://opentelemetry.io/docs/languages/js/getting-started/nodejs/)
-- [React Router instrumentation metadata](https://reactrouter.com/how-to/instrumentation)
-- [OTLP HTTP exporter base URLs](https://github.com/open-telemetry/opentelemetry-collector/blob/v0.162.0/exporter/otlphttpexporter/README.md)
-- [Loki OTLP structured metadata](https://grafana.com/docs/loki/latest/send-data/otel/)
-- [Prometheus OpenTelemetry ingestion](https://prometheus.io/docs/guides/opentelemetry/)
-- [Tempo 3 monolithic example](https://github.com/grafana/tempo/blob/v3.1.0/example/docker-compose/single-binary/tempo.yaml)
-- [Tempo 3 retention configuration](https://github.com/grafana/intro-to-mltp/blob/main/tempo/tempo.yaml)
-- [Grafana Loki derived fields](https://grafana.com/docs/grafana/latest/datasources/loki/configure/)
-- [Compose Watch](https://docs.docker.com/compose/how-tos/file-watch/)
+Only host tools receive `SENTRY_URL`, `SENTRY_ORG`, `SENTRY_PROJECT`, `SENTRY_AGENT_TOKEN`, and
+`SENTRY_UPLOAD_TOKEN`. They are never passed through application Compose environment mappings.

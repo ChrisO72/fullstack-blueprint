@@ -1,5 +1,5 @@
 import { S3Client } from "@aws-sdk/client-s3";
-import { env } from "~/env.server";
+import { env } from "./env.server";
 
 const credentials =
   env.S3_ACCESS_KEY_ID && env.S3_SECRET_ACCESS_KEY

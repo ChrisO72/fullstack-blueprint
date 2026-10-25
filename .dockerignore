@@ -10,3 +10,10 @@ coverage
 .DS_Store
 .codex
 .agents
+
+**/.local/
+
+**/.git
+**/.env
+**/.env.*
+!**/.env.example

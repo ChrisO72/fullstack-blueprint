@@ -1,4 +1,4 @@
-import { registerCleanup } from "~/telemetry/runtime.server";
+import { registerCleanup } from "~/runtime/lifecycle.server";
 import { createHmac } from "node:crypto";
 import Redis from "ioredis";
 import { env } from "~/env.server";

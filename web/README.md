@@ -2,6 +2,21 @@
 
 React Router 8 SSR app. See the repo-root [README.md](../README.md) for stack, commands, and conventions.
 
+## Running and configuration
+
+`Dockerfile` defines `development`, `build`, and `production` targets; build with the repository
+root as context. `docker compose up --build --watch web` starts web and its infrastructure without
+the worker or Sentry stack. `npm run dev:web` runs on the host. `npm run build:web` writes
+`build/web/`; `npm run start:web` runs that build. Development listens on 5173 and the production
+image on 3000. See the root README for standalone production image commands.
+
+Required: `DATABASE_URL`, `REDIS_URL`, `APP_URL`, `JWT_SECRET`, `REFRESH_SECRET`, and
+`RATE_LIMIT_KEY_SECRET`. Each secret needs at least 32 characters. `NODE_ENV` is set by the
+startup command. Optional mail and storage settings are owned by their modules; web needs the
+Lettermint settings to enable email-dependent authentication features. Sentry settings are optional.
+Only public telemetry settings are serialized to the browser. Root `.env` supports host development;
+containers receive explicit environment values. The web shutdown adapter lives in `vite.ts`.
+
 ## Routing
 
 Route table lives in [routes.ts](routes.ts). Add new routes there with `route()`, `index()`, and `layout()` from `@react-router/dev/routes`:
@@ -184,16 +199,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~
 ## Development and observability
 
 `make dev` runs Vite on `0.0.0.0:5173` inside Docker, published only at `localhost:5173`.
-The port is strict; Vite’s default host restrictions remain enabled. Compose Watch syncs source
-for HMR and restarts the process for telemetry bootstrap changes. The host command remains
-`npm run dev:web`.
+Compose Watch synchronizes source for HMR and restarts SDK/runtime/startup changes. The host
+alternative remains `npm run dev:web`.
 
-React Router’s request instrumentation creates the server span, extracts incoming W3C context,
-and records the matched route pattern, status, count, and duration. It inspects returned error
-metadata as well as thrown errors. Duration measures handler execution, not the complete streamed
-response lifetime. Streaming errors still use `handleError`/`onError` reporting. There is no custom
-request-ID middleware or response header; OpenTelemetry trace/span IDs provide correlation.
+Sentry initializes before server imports. Its React Router instrumentation traces request handlers,
+loaders, actions, and middleware. Application request counts and durations use matched route patterns;
+durations end when the handler returns, rather than when response streaming finishes. Error reporting
+filters aborts and expected responses below 500, and retains late streaming failures.
 
-The SDK loads before the web CLI and stays outside Vite HMR. Vite closes its HTTP server before
-application resources and the SDK are shut down on SIGINT/SIGTERM. See
-[telemetry/README.md](../telemetry/README.md) for conventions.
+The browser SDK starts before hydration, connects navigation/fetch traces to server traces, and
+records masked replay. Only the public DSN, release, environment, origin, and sampling settings are
+serialized into the page. API tokens remain server-side. Vite shutdown drains the server, closes
+shared resources, then flushes Sentry. See [telemetry/README.md](../telemetry/README.md).

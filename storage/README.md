@@ -6,6 +6,9 @@ metadata; S3 holds file bytes.
 All `S3_*` environment variables are optional. When `S3_BUCKET` is unset, the application still
 starts and the Files page displays setup guidance instead of file controls.
 
+This component owns its environment validation and uses the third-party MinIO image locally.
+There is no custom storage Dockerfile. Root `.env` is the local source of configuration.
+
 ## Local development
 
 `make dev` (or the host workflow’s `npm run docker:up`) starts MinIO and creates the private `blueprint-files` bucket automatically.
@@ -16,7 +19,7 @@ starts and the Files page displays setup guidance instead of file controls.
 - Credentials and bucket: [`.env.example`](../.env.example)
 
 The `objectdata` Docker volume preserves files across restarts. `npm run docker:wipe` deliberately
-removes it along with PostgreSQL, Redis, and telemetry data.
+removes it along with PostgreSQL and Redis data. The separate Sentry project is preserved.
 
 The browser must receive presigned URLs containing `127.0.0.1:9000`, not the Compose hostname
 `storage`. Compose supplies `S3_ENDPOINT=http://storage:9000` for server operations and

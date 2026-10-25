@@ -1,10 +1,11 @@
 import type { Plugin } from "vite";
-import { shutdownTelemetry } from "./runtime.server.ts";
+import { shutdown } from "../telemetry/shutdown.server.ts";
+import { processController } from "../runtime/process.server.ts";
 
 // Vite owns its HTTP server and signal handlers; finish cleanup before its exit.
-export function telemetryShutdown(): Plugin {
+export function applicationShutdown(): Plugin {
   return {
-    name: "telemetry-shutdown",
+    name: "application-shutdown",
     configureServer(server) {
       let stopping = false;
       const onSignal = () => {
@@ -12,8 +13,8 @@ export function telemetryShutdown(): Plugin {
         stopping = true;
         setTimeout(() => process.exit(1), 25_000).unref();
         void server.close().then(
-          () => process.exit(0),
-          () => process.exit(1),
+          () => processController.stop(),
+          () => processController.stop(1),
         );
       };
       process.prependOnceListener("SIGTERM", onSignal);
@@ -26,7 +27,7 @@ export function telemetryShutdown(): Plugin {
           process.removeListener("SIGTERM", onSignal);
           process.removeListener("SIGINT", onSignal);
           // A Vite config reload also closes the server; keep the SDK alive then.
-          if (stopping) await shutdownTelemetry();
+          if (stopping) await shutdown();
         }
       };
     },

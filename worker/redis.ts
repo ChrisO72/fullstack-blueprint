@@ -1,4 +1,4 @@
-import { env } from "../env.server";
+import { env } from "./env.server";
 
 const redisUrl = new URL(env.REDIS_URL);
 

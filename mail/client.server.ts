@@ -1,5 +1,5 @@
 import { Lettermint } from "lettermint";
-import { env } from "~/env.server";
+import { env } from "./env.server";
 import { log } from "~/telemetry/log.server";
 
 const lettermint = env.LETTERMINT_API_KEY
@@ -29,7 +29,7 @@ export async function sendEmail({ to, subject, html, text }: Email) {
   try {
     await lettermint.email.from(from).to(to).subject(subject).html(html).text(text).send();
   } catch (error) {
-    log.error("Email delivery failed", error);
+    log.warn("Email delivery failed");
     throw error;
   }
 }

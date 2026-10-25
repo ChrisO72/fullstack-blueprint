@@ -5,10 +5,18 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
+  useRouteLoaderData,
 } from "react-router";
+
+import { browserConfig } from "~/telemetry/config.server";
+import { env } from "~/env.server";
 
 import type { Route } from "./+types/root";
 import "./app.css";
+
+export function loader() {
+  return { sentry: browserConfig(env.APP_URL) };
+}
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -24,11 +32,17 @@ export const links: Route.LinksFunction = () => [
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {
+  const data = useRouteLoaderData<typeof loader>("root");
   return (
     <html lang="en">
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `window.__SENTRY_CONFIG__=${JSON.stringify(data?.sentry ?? null).replace(/</g, "\\u003c")};`,
+          }}
+        />
         <Meta />
         <Links />
         <script

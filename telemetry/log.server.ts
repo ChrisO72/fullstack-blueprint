@@ -1,31 +1,29 @@
-import { context, type Attributes } from "@opentelemetry/api";
-import { logs, SeverityNumber } from "@opentelemetry/api-logs";
-import { sanitizeAttributes, sanitizeError, sanitizeText } from "./sanitize.server";
+import * as Sentry from "@sentry/node";
+import { sanitizeAttributes, sanitizeText } from "./redact.ts";
 
-function emit(
-  severity: "INFO" | "WARN" | "ERROR",
-  message: string,
-  attributes: Attributes = {},
-  error?: unknown,
-) {
-  const safeError = error === undefined ? undefined : sanitizeError(error);
-  logs.getLogger("blueprint").emit({
-    context: context.active(),
-    severityNumber: SeverityNumber[severity],
-    severityText: severity,
-    body: sanitizeText(message),
-    attributes: {
-      ...sanitizeAttributes(attributes),
-      ...(safeError
-        ? { "error.type": safeError.name, "exception.message": safeError.message }
-        : {}),
-    },
-  });
+type Attributes = Record<string, string | number | boolean>;
+
+function emit(level: "info" | "warn" | "error", message: string, attributes?: Attributes) {
+  const fields = sanitizeAttributes(attributes);
+  const text = sanitizeText(message);
+  if (Sentry.isEnabled()) Sentry.logger[level](text, fields);
+  else console[level](text, fields);
+}
+
+export function reportError(message: string, error: unknown, attributes?: Attributes) {
+  emit("error", message, attributes);
+  if (Sentry.isEnabled()) {
+    Sentry.withScope((scope) => {
+      scope.setTags(sanitizeAttributes(attributes));
+      Sentry.captureException(error);
+    });
+  } else if (error instanceof Error) {
+    console.error(sanitizeText(error.stack ?? error.message));
+  }
 }
 
 export const log = {
-  info: (message: string, attributes?: Attributes) => emit("INFO", message, attributes),
-  warn: (message: string, attributes?: Attributes) => emit("WARN", message, attributes),
-  error: (message: string, error: unknown, attributes?: Attributes) =>
-    emit("ERROR", message, attributes, error),
+  info: (message: string, attributes?: Attributes) => emit("info", message, attributes),
+  warn: (message: string, attributes?: Attributes) => emit("warn", message, attributes),
+  error: reportError,
 };

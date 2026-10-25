@@ -2,6 +2,19 @@
 
 Background job processing with BullMQ + node-cron.
 
+## Running and configuration
+
+`Dockerfile` defines `development`, `build`, and `production` targets; build with the repository
+root as context. `docker compose up --build --watch worker` starts the worker and its infrastructure
+without web or Sentry. `npm run dev:worker` runs on the host. `npm run build:worker` writes
+`build/worker/`; `npm run start:worker` starts that build. The worker exposes no HTTP port.
+See the root README for standalone production image commands.
+
+Required by the worker and its jobs: `REDIS_URL`, `DATABASE_URL`, and `APP_URL`. Web authentication
+secrets are not required. Optional `LETTERMINT_API_KEY` and `LETTERMINT_MAIL_FROM` enable delivery;
+optional `S3_*` settings enable file jobs. Sentry settings are optional. Each integration validates
+its own settings. Host commands read root `.env`; containers receive explicit environment values.
+
 ## Pattern
 
 Each job owns its name, payload type, and handler. The dispatcher connects those modules to BullMQ,
@@ -89,19 +102,18 @@ await enqueueConfirmationEmailJob({
 - Use cron expressions: `* * * * *` (min hour day month weekday)
 - Configure `attempts` and `backoff` when a job should retry; BullMQ jobs run once by default
 
-## Development and telemetry
+## Development and observability
 
-`make dev` runs the worker in Node 24. Compose Watch owns source synchronization and restarts; the
-worker has no nested file watcher. The host alternative remains `npm run dev:worker`.
+`make dev` runs the worker in Node 24. Compose Watch owns synchronization and restarts; the host
+alternative remains `npm run dev:worker`. Sentry initializes before application imports.
 
-`enqueueJob` starts a producer span and puts W3C context in BullMQ’s `telemetry.metadata`; the
-job payload is unchanged. `processJob` extracts only string `traceparent`/`tracestate` fields and
-starts one consumer span per attempt. Missing/malformed metadata starts a new trace;
-`telemetry.omitContext` prevents propagation. Failures are logged inside that active span and
-rethrow the original error, preserving BullMQ retries. Job IDs are hashed in telemetry because
-existing IDs may include authentication tokens. Never log the payload.
+`enqueueJob` passes Sentry trace headers through BullMQ's `telemetry.metadata`, without changing job
+payloads. Each consumer attempt has an isolated scope and connected queue span. Missing, malformed,
+legacy, or omitted context starts a fresh trace. `telemetry.omitContext` prevents propagation.
+Errors are captured at the dispatcher boundary and rethrown unchanged for BullMQ retries. Lower-level
+mail failures add a log without capturing the exception twice. Job IDs are hashed because existing
+IDs contain tokens; payloads are never logged. Attempt counts and durations use bounded labels.
 
-Request/job metrics use bounded labels; attempt numbers and hashed IDs appear only in logs/spans.
-On SIGINT/SIGTERM the worker stops accepting jobs, drains the current attempt, closes shared
-resources, then flushes the SDK. A 25-second deadline fits the container’s 30-second grace period.
-See [telemetry/README.md](../telemetry/README.md) for queries and logging examples.
+SIGINT/SIGTERM stops the worker, drains jobs, closes shared resources, and flushes Sentry within the
+existing 25-second deadline. Fatal process errors use the same path and exit nonzero. See
+[telemetry/README.md](../telemetry/README.md) for agent access and the data policy.

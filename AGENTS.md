@@ -15,3 +15,11 @@ Use this gate as the only verification step. Do not perform manual browser or UI
 - Don't write your own `LoaderArgs` / `ActionArgs` types. Import the generated `Route` types from `./+types/<name>`.
 - Don't import the `db` client into routes or worker handlers. Go through [db/repositories/](db/repositories/).
 - Don't build UI from scratch when a primitive in [web/components/ui-kit/](web/components/ui-kit) already fits.
+
+## Debugging evidence
+
+Use the repository-local Sentry CLI to inspect recorded application errors, traces, and logs.
+Read [telemetry/README.md](telemetry/README.md#agent-debugging) for commands and source mapping.
+Use the configured read-only agent token. Reading existing evidence does not authorize starting
+services, triggering requests, or performing runtime testing; the verification gate remains
+`npm run check` only.

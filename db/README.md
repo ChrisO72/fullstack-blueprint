@@ -2,6 +2,22 @@
 
 Drizzle ORM + PostgreSQL. See the repo-root [README.md](../README.md) for stack and commands, and [repositories/README.md](repositories/README.md) for the repository function template.
 
+## Containers and configuration
+
+`Dockerfile` extends the PostgreSQL 16 Alpine image and retains its standard entrypoint.
+Configure it with `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_DB`; persist data at
+`/var/lib/postgresql/data`. Root Compose supplies local defaults and a named volume.
+
+`Dockerfile.migrate` packages the compiled Node migration runner and SQL files. Build with the
+repository root as context. Its only required application variable is `DATABASE_URL`; it needs
+neither web secrets nor Redis, mail, or Sentry settings. `npm run build:db` writes `build/db/`.
+Drizzle generation and studio also use database-only environment validation.
+
+Compose waits for healthy PostgreSQL, runs the migration container, and starts web/worker only if
+it exits successfully. In a deployment, run this image once before starting the new application
+version. PostgreSQL restarts do not run application migrations. Never put application migrations
+in the PostgreSQL first-initialization directory: existing databases need later migrations too.
+
 ## Files
 
 - `schema/` — table definitions grouped by domain (`auth.ts`, `files.ts`, `items.ts`, `organizations.ts`, `settings.ts`).

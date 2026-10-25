@@ -1,0 +1,13 @@
+services:
+  web:
+    networks: [default, sentry-ingress]
+    environment:
+      SENTRY_INGEST_ORIGIN: http://sentry-ingest
+  worker:
+    networks: [default, sentry-ingress]
+    environment:
+      SENTRY_INGEST_ORIGIN: http://sentry-ingest
+networks:
+  sentry-ingress:
+    external: true
+    name: fullstack-blueprint-sentry-ingress

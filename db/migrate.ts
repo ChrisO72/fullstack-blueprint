@@ -2,8 +2,8 @@ import { fileURLToPath } from "node:url";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { Pool } from "pg";
-import { env } from "../env.server";
-import { sanitizeText } from "~/telemetry/sanitize.server";
+import { env } from "./env.server";
+import { sanitizeText } from "~/telemetry/redact";
 
 const pool = new Pool({ connectionString: env.DATABASE_URL, connectionTimeoutMillis: 10_000 });
 

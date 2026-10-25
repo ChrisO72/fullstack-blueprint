@@ -1,73 +1,72 @@
-import {
-  context,
-  propagation,
-  ROOT_CONTEXT,
-  SpanKind,
-  SpanStatusCode,
-  trace,
-  metrics,
-} from "@opentelemetry/api";
+import { createHash } from "node:crypto";
+import * as Sentry from "@sentry/node";
 import { log } from "./log.server";
-import { sanitizeError, safeJobId } from "./sanitize.server";
 
-export function parseTraceMetadata(metadata: string | undefined): Record<string, string> {
+export const safeJobId = (id: string) => createHash("sha256").update(id).digest("hex").slice(0, 24);
+
+export function parseTraceMetadata(metadata?: string): { sentryTrace?: string; baggage?: string } {
   if (!metadata || metadata.length > 4096) return {};
   try {
     const value: unknown = JSON.parse(metadata);
-    if (!value || typeof value !== "object" || Array.isArray(value)) return {};
-    const carrier: Record<string, string> = {};
-    for (const key of ["traceparent", "tracestate"] as const) {
-      if (key in value) {
-        const field: unknown = value[key as keyof typeof value];
-        if (typeof field !== "string") return {};
-        carrier[key] = field;
-      }
-    }
-    return carrier;
+    if (!value || typeof value !== "object" || !("sentry-trace" in value)) return {};
+    const sentryTrace = value["sentry-trace"];
+    if (
+      typeof sentryTrace !== "string" ||
+      !/^[a-f0-9]{32}-[a-f0-9]{16}(?:-[01])?$/.test(sentryTrace) ||
+      /^0{32}-|^[a-f0-9]{32}-0{16}(?:-|$)/.test(sentryTrace)
+    )
+      return {};
+    const baggage = "baggage" in value ? value.baggage : undefined;
+    if (baggage !== undefined && typeof baggage !== "string") return {};
+    if (baggage && baggage.split(",").some((part) => !/^[\w-]+=[^\s;,]*$/.test(part.trim())))
+      return {};
+    // Bad percent encoding must not reach the SDK or affect processing the job.
+    if (baggage) decodeURIComponent(baggage);
+    return {
+      sentryTrace,
+      baggage: baggage
+        ?.split(",")
+        .filter((part) =>
+          /^sentry-(?:trace_id|public_key|sampled|sample_rate|environment|release)=/.test(
+            part.trim(),
+          ),
+        )
+        .join(","),
+    };
   } catch {
     return {};
   }
 }
 
-const tracer = trace.getTracer("blueprint.queue");
-function instruments() {
-  const meter = metrics.getMeter("blueprint.queue");
-  return {
-    attempts: meter.createCounter("job.attempts", { unit: "{attempt}" }),
-    duration: meter.createHistogram("job.duration", { unit: "s" }),
-  };
-}
-const shared = globalThis as typeof globalThis & {
-  __blueprintJobMetrics?: ReturnType<typeof instruments>;
-};
-const { attempts, duration } = (shared.__blueprintJobMetrics ??= instruments());
-
-export async function produceJob<T>(name: string, run: (metadata: string) => Promise<T>) {
-  return tracer.startActiveSpan(
-    `enqueue ${name}`,
-    {
-      kind: SpanKind.PRODUCER,
-      attributes: {
-        "messaging.system": "redis",
-        "messaging.destination.name": "default",
-        "job.name": name,
+export async function produceJob<T>(
+  name: string,
+  run: (metadata: string) => Promise<T>,
+): Promise<T> {
+  const publish = () =>
+    Sentry.startSpan(
+      {
+        name: `enqueue ${name}`,
+        op: "queue.publish",
+        attributes: {
+          "messaging.system": "redis",
+          "messaging.destination.name": "default",
+          "job.name": name,
+        },
       },
-    },
-    async (span) => {
-      try {
-        const carrier: Record<string, string> = {};
-        propagation.inject(context.active(), carrier);
-        return await run(JSON.stringify(carrier));
-      } catch (error) {
-        span.recordException(sanitizeError(error));
-        span.setStatus({ code: SpanStatusCode.ERROR });
-        log.error("Job enqueue failed", error, { "job.name": name });
-        throw error;
-      } finally {
-        span.end();
-      }
-    },
-  );
+      async () => {
+        try {
+          return await run(JSON.stringify(Sentry.getTraceData()));
+        } catch (error) {
+          // The request/schedule boundary reports the exception; avoid double capture here.
+          log.warn("Job enqueue failed", { "job.name": name });
+          throw error;
+        }
+      },
+    );
+  // Queue monitoring expects the publish span to be a child, including scheduled producers.
+  return Sentry.getActiveSpan()
+    ? publish()
+    : Sentry.startSpan({ name: `enqueue ${name}`, op: "function" }, publish);
 }
 
 export async function consumeJob(
@@ -77,40 +76,47 @@ export async function consumeJob(
   metadata: string | undefined,
   run: () => Promise<void>,
 ) {
-  const jobId = safeJobId(id);
-  const parent = propagation.extract(ROOT_CONTEXT, parseTraceMetadata(metadata));
-  return tracer.startActiveSpan(
-    `process ${name}`,
-    {
-      kind: SpanKind.CONSUMER,
-      attributes: {
-        "messaging.system": "redis",
-        "messaging.destination.name": "default",
-        "job.name": name,
-        "job.id": jobId,
-        "job.attempt": attempt,
-      },
-    },
-    parent,
-    async (span) => {
-      const start = performance.now();
-      let outcome = "success";
-      const fields = { "job.name": name, "job.id": jobId, "job.attempt": attempt };
-      try {
-        await run();
-        log.info("Job completed", fields);
-      } catch (error) {
-        outcome = "error";
-        span.recordException(sanitizeError(error));
-        span.setStatus({ code: SpanStatusCode.ERROR });
-        log.error("Job failed", error, fields);
-        throw error;
-      } finally {
-        const labels = { "job.name": name, outcome };
-        attempts.add(1, labels);
-        duration.record((performance.now() - start) / 1000, labels);
-        span.end();
-      }
-    },
+  return Sentry.withIsolationScope(() =>
+    Sentry.continueTrace(
+      { sentryTrace: undefined, baggage: undefined, ...parseTraceMetadata(metadata) },
+      () =>
+        Sentry.startSpan({ name: `job ${name}`, op: "function", forceTransaction: true }, () =>
+          Sentry.startSpan(
+            {
+              name: `process ${name}`,
+              op: "queue.process",
+              attributes: {
+                "messaging.system": "redis",
+                "messaging.destination.name": "default",
+                "messaging.message.id": safeJobId(id),
+                "messaging.message.retry.count": attempt - 1,
+                "job.name": name,
+                "job.attempt": attempt,
+              },
+            },
+            async () => {
+              const started = performance.now();
+              let outcome = "success";
+              const fields = { "job.name": name, "job.id": safeJobId(id), "job.attempt": attempt };
+              Sentry.setTags(fields);
+              try {
+                await run();
+                log.info("Job completed", fields);
+              } catch (error) {
+                outcome = "error";
+                log.error("Job failed", error, fields);
+                throw error;
+              } finally {
+                const attributes = { "job.name": name, outcome };
+                Sentry.metrics.count("job.attempts", 1, { attributes });
+                Sentry.metrics.distribution("job.duration", (performance.now() - started) / 1000, {
+                  unit: "second",
+                  attributes,
+                });
+              }
+            },
+          ),
+        ),
+    ),
   );
 }

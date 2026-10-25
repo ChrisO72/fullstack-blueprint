@@ -1,4 +1,4 @@
-import { env } from "~/env.server";
+import { env } from "./env.server";
 import { sendEmail } from "./client.server";
 
 type ConfirmationEmail = {

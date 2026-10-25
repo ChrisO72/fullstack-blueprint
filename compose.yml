@@ -8,14 +8,30 @@ volumes:
   pgdata:
   redisdata:
   objectdata:
-  lokidata:
-  prometheusdata:
-  tempodata:
-  grafanadata:
+
+x-app-environment: &app-environment
+  DATABASE_URL: postgresql://${POSTGRES_USER:-blueprint-user}:${POSTGRES_PASSWORD:-blueprint-password}@database:5432/blueprint
+  REDIS_URL: redis://redis:6379
+  APP_URL: ${APP_URL:-http://localhost:5173}
+  LETTERMINT_API_KEY: ${LETTERMINT_API_KEY:-}
+  LETTERMINT_MAIL_FROM: ${LETTERMINT_MAIL_FROM:-}
+  S3_REGION: ${S3_REGION:-eu-central-1}
+  S3_BUCKET: ${S3_BUCKET:-}
+  S3_ENDPOINT: http://storage:9000
+  S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:-http://127.0.0.1:9000}
+  S3_FORCE_PATH_STYLE: "true"
+  S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-blueprint-access-key}
+  S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-blueprint-secret-key}
+  SENTRY_DSN: ${SENTRY_DSN:-}
+  SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-development}
+  SENTRY_RELEASE: ${SENTRY_RELEASE:-blueprint@local}
+  SENTRY_TRACES_SAMPLE_RATE: ${SENTRY_TRACES_SAMPLE_RATE:-1}
 
 services:
   database:
-    image: postgres:16-alpine
+    build:
+      context: .
+      dockerfile: db/Dockerfile
     restart: always
     environment:
       POSTGRES_DB: "blueprint"
@@ -82,84 +98,30 @@ services:
   migrate:
     build:
       context: .
-      dockerfile: Dockerfile.dev
-    env_file: .env
+      dockerfile: db/Dockerfile.migrate
+    init: true
+    restart: "no"
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-blueprint-user}:${POSTGRES_PASSWORD:-blueprint-password}@database:5432/blueprint
     depends_on:
       database:
         condition: service_healthy
-    command: ["npm", "run", "db:migrate"]
-
-  otelcol:
-    image: otel/opentelemetry-collector-contrib:0.162.0
-    command: ["--config=/etc/otelcol/config.yaml"]
-    volumes:
-      - ./telemetry/config/collector.yaml:/etc/otelcol/config.yaml:ro
-    depends_on: [loki, prometheus, tempo]
-
-  loki:
-    image: grafana/loki:3.7.8
-    command: ["-config.file=/etc/loki/config.yaml"]
-    volumes:
-      - ./telemetry/config/loki.yaml:/etc/loki/config.yaml:ro
-      - lokidata:/loki
-
-  prometheus:
-    image: prom/prometheus:v3.15.0
-    command:
-      - --config.file=/etc/prometheus/prometheus.yaml
-      - --storage.tsdb.path=/prometheus
-      - --storage.tsdb.retention.time=3d
-      - --web.enable-otlp-receiver
-    volumes:
-      - ./telemetry/config/prometheus.yaml:/etc/prometheus/prometheus.yaml:ro
-      - prometheusdata:/prometheus
-
-  tempo:
-    image: grafana/tempo:3.1.0
-    command: ["-target=all", "-config.file=/etc/tempo/config.yaml"]
-    volumes:
-      - ./telemetry/config/tempo.yaml:/etc/tempo/config.yaml:ro
-      - tempodata:/var/tempo
-
-  grafana:
-    image: grafana/grafana:13.2.4
-    environment:
-      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
-      GF_USERS_ALLOW_SIGN_UP: "false"
-    ports:
-      - "127.0.0.1:3000:3000"
-    volumes:
-      - ./telemetry/config/grafana:/etc/grafana/provisioning/datasources:ro
-      - grafanadata:/var/lib/grafana
-    depends_on: [loki, prometheus, tempo]
 
   web:
     build:
       context: .
-      dockerfile: Dockerfile.dev
+      dockerfile: web/Dockerfile
+      target: development
     init: true
     stop_grace_period: 30s
-    env_file: .env
-    environment: &app-environment
-      NODE_ENV: development
-      DATABASE_URL: postgresql://${POSTGRES_USER:-blueprint-user}:${POSTGRES_PASSWORD:-blueprint-password}@database:5432/blueprint
-      REDIS_URL: redis://redis:6379
-      S3_ENDPOINT: http://storage:9000
-      S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:-http://127.0.0.1:9000}
-      OTEL_SERVICE_NAME: web
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otelcol:4318
-      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
-      OTEL_TRACES_EXPORTER: otlp
-      OTEL_METRICS_EXPORTER: otlp
-      OTEL_LOGS_EXPORTER: otlp
-      OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE: cumulative
-      OTEL_METRIC_EXPORT_INTERVAL: "5000"
-      OTEL_METRIC_EXPORT_TIMEOUT: "3000"
-      OTEL_TRACES_SAMPLER: always_on
-      OTEL_PROPAGATORS: tracecontext
+    environment:
+      <<: *app-environment
+      JWT_SECRET: ${JWT_SECRET:-}
+      REFRESH_SECRET: ${REFRESH_SECRET:-}
+      RATE_LIMIT_KEY_SECRET: ${RATE_LIMIT_KEY_SECRET:-}
+      SENTRY_PUBLIC_DSN: ${SENTRY_PUBLIC_DSN:-}
+      SENTRY_REPLAYS_SESSION_SAMPLE_RATE: ${SENTRY_REPLAYS_SESSION_SAMPLE_RATE:-1}
+      SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE: ${SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE:-1}
     depends_on: &app-dependencies
       database:
         condition: service_healthy
@@ -169,18 +131,6 @@ services:
         condition: service_completed_successfully
       storage-init:
         condition: service_completed_successfully
-      otelcol:
-        condition: service_started
-    command:
-      - node
-      - --conditions=development
-      - --experimental-loader=@opentelemetry/instrumentation/hook.mjs
-      - --import
-      - tsx
-      - --import
-      - ./telemetry/register.server.ts
-      - ./node_modules/@react-router/dev/bin.cjs
-      - dev
     ports:
       - "127.0.0.1:5173:5173"
     develop:
@@ -191,40 +141,47 @@ services:
           initial_sync: true
           ignore:
             - telemetry/
+            - runtime/
+            - web/vite.ts
+            - web/build.ts
+            - web/Dockerfile
+            - worker/Dockerfile
+            - db/Dockerfile
+            - db/Dockerfile.migrate
             - package.json
             - package-lock.json
-            - Dockerfile.dev
             - compose.yml
         - action: sync+restart
           path: ./telemetry
           target: /app/telemetry
+          initial_sync: true
+          ignore: [sentry/.local/]
+        - action: sync+restart
+          path: ./runtime
+          target: /app/runtime
+          initial_sync: true
+        - action: sync+restart
+          path: ./web/vite.ts
+          target: /app/web/vite.ts
           initial_sync: true
         - action: rebuild
           path: package.json
         - action: rebuild
           path: package-lock.json
         - action: rebuild
-          path: Dockerfile.dev
+          path: web/Dockerfile
+        - action: rebuild
+          path: web/build.ts
 
   worker:
     build:
       context: .
-      dockerfile: Dockerfile.dev
+      dockerfile: worker/Dockerfile
+      target: development
     init: true
     stop_grace_period: 30s
-    env_file: .env
-    environment:
-      <<: *app-environment
-      OTEL_SERVICE_NAME: worker
+    environment: *app-environment
     depends_on: *app-dependencies
-    command:
-      - node
-      - --experimental-loader=@opentelemetry/instrumentation/hook.mjs
-      - --import
-      - tsx
-      - --import
-      - ./telemetry/register.server.ts
-      - worker/index.ts
     develop:
       watch:
         - action: sync+restart
@@ -232,13 +189,20 @@ services:
           target: /app
           initial_sync: true
           ignore:
+            - telemetry/sentry/.local/
             - package.json
             - package-lock.json
-            - Dockerfile.dev
+            - worker/Dockerfile
+            - worker/build.ts
+            - web/Dockerfile
+            - db/Dockerfile
+            - db/Dockerfile.migrate
             - compose.yml
         - action: rebuild
           path: package.json
         - action: rebuild
           path: package-lock.json
         - action: rebuild
-          path: Dockerfile.dev
+          path: worker/Dockerfile
+        - action: rebuild
+          path: worker/build.ts

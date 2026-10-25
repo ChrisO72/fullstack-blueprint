@@ -1,3 +1,4 @@
+import { captureException } from "@sentry/react-router";
 import { ArrowUpTrayIcon } from "@heroicons/react/24/outline";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { useFetcher, useRevalidator } from "react-router";
@@ -64,7 +65,7 @@ export function UploadFileDialog() {
         confirmData.set("fileId", prepared.fileId.toString());
         finishFetcher.submit(confirmData, { method: "POST" });
       } catch (error) {
-        console.error("Direct file upload failed", error);
+        captureException(error);
         setClientError("The file could not be uploaded. Please try again.");
         setIsUploading(false);
 

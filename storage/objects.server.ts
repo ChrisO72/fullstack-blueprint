@@ -2,7 +2,7 @@ import { DeleteObjectCommand, GetObjectCommand, HeadObjectCommand } from "@aws-s
 import { createPresignedPost } from "@aws-sdk/s3-presigned-post";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { randomUUID } from "node:crypto";
-import { env } from "~/env.server";
+import { env } from "./env.server";
 import { storageClient, storageSigningClient } from "./client.server";
 
 export const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
