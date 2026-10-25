@@ -1,213 +1,98 @@
 # Web
 
-React Router 8 SSR app. See the repo-root [README.md](../README.md) for stack, commands, and conventions.
+React Router SSR application. All commands run from the repository root.
 
-## Running and configuration
+## Configuration
 
-`Dockerfile` defines `development`, `build`, and `production` targets; build with the repository
-root as context. `docker compose up --build --watch web` starts web and its infrastructure without
-the worker or Sentry stack. `npm run dev:web` runs on the host. `npm run build:web` writes
-`build/web/`; `npm run start:web` runs that build. Development listens on 5173 and the production
-image on 3000. See the root README for standalone production image commands.
+Requires Node 24+, Docker, and Compose 2.32.2+ for the workflows below.
 
-Required: `DATABASE_URL`, `REDIS_URL`, `APP_URL`, `JWT_SECRET`, `REFRESH_SECRET`, and
-`RATE_LIMIT_KEY_SECRET`. Each secret needs at least 32 characters. `NODE_ENV` is set by the
-startup command. Optional mail and storage settings are owned by their modules; web needs the
-Lettermint settings to enable email-dependent authentication features. Sentry settings are optional.
-Only public telemetry settings are serialized to the browser. Root `.env` supports host development;
-containers receive explicit environment values. The web shutdown adapter lives in `vite.ts`.
-
-## Routing
-
-Route table lives in [routes.ts](routes.ts). Add new routes there with `route()`, `index()`, and `layout()` from `@react-router/dev/routes`:
-
-```ts
-import { type RouteConfig, index, layout, route } from "@react-router/dev/routes";
-
-export default [
-  route("login", "routes/auth/login.tsx"),
-  layout("routes/layout.tsx", [index("routes/home.tsx"), route("items", "routes/items/index.tsx")]),
-] satisfies RouteConfig;
+```bash
+npm ci                       # Install dependencies and host tools
+cp .env.example .env         # First setup only; preserve an existing .env
+node -e "console.log(require('crypto').randomBytes(48).toString('hex'))" # Run once per secret
 ```
 
-## Route module template
+Set these in the root `.env`; replace each secret placeholder with a different generated value:
 
-Each route module exports a `loader`, an `action`, and a default component. Types come from the generated `./+types/<name>` module.
-
-```ts
-import type { Route } from "./+types/index";
-import { Form, redirect, useActionData } from "react-router";
-import { z } from "zod";
-import { FieldError } from "~/components/field-error";
-import { FormError } from "~/components/form-error";
-import { Field, Label } from "~/components/ui-kit/fieldset";
-import { Input } from "~/components/ui-kit/input";
-import { getAuthenticatedUser } from "~/lib/session.server";
-import { parseForm, type ActionData } from "~/lib/form";
-import { createItem } from "~/db/repositories/items";
-
-const createItemSchema = z.object({
-  title: z.string().min(1).max(255),
-  description: z.string().max(1000).optional(),
-});
-
-export async function loader({ context }: Route.LoaderArgs) {
-  const user = getAuthenticatedUser(context);
-  return { user };
-}
-
-export async function action({ request, context }: Route.ActionArgs): Promise<ActionData | Response> {
-  const user = getAuthenticatedUser(context);
-
-  const formData = await request.formData();
-  const { data, fieldErrors } = parseForm(formData, createItemSchema);
-  if (fieldErrors) return { fieldErrors };
-
-  await createItem({ organizationId: user.organizationId, ...data });
-  return redirect(".");
-}
-
-export default function Page() {
-  const actionData = useActionData<ActionData>();
-  return (
-    <Form method="POST">
-      <FormError actionData={actionData} />
-      <Field>
-        <Label>Title</Label>
-        <Input name="title" invalid={!!actionData?.fieldErrors?.title} />
-        <FieldError name="title" actionData={actionData} />
-      </Field>
-    </Form>
-  );
-}
+```dotenv
+DATABASE_URL=postgresql://blueprint-user:blueprint-password@127.0.0.1:55432/blueprint # Host database
+REDIS_URL=redis://localhost:6379       # Host queue and rate-limit store
+APP_URL=http://localhost:5173         # Public web origin
+JWT_SECRET=                          # Required: random value, at least 32 characters
+REFRESH_SECRET=                      # Required: different random value, at least 32 characters
+RATE_LIMIT_KEY_SECRET=               # Required: different random value, at least 32 characters
 ```
 
-The protected layout middleware calls `requireAuth(request)` once per request, stores the user in `authenticatedUserContext`, and appends rotated access/refresh cookies to the final response (see [routes/layout.tsx](routes/layout.tsx)). This covers both loaders and actions without racing parallel matched loaders. If the session is invalid or the user record was deleted, `requireAuth` redirects to `/login` (clearing cookies in the deleted-user case). Protected loaders/actions read the cached user with `getAuthenticatedUser(context)`. Use `requireAdmin(context)` for admin-only routes; it reads the same cached user and redirects non-admins to `/`.
+Compose supplies internal database and Redis addresses. Startup commands set `NODE_ENV`.
+Optional integrations: [mail](../mail/README.md#configuration), [storage](../storage/README.md#configuration),
+and [telemetry](../telemetry/README.md#configuration). Mail enables account confirmation and password resets.
 
-## Server boundary
+## Run locally
 
-Server-only code lives in `*.server.ts` and is never imported from client components.
+### Docker
 
-- [lib/session.server.ts](lib/session.server.ts) — auth cookies, protected-route context, and authorization helpers.
-- `lib/auth/` — password validation, registration, session tokens, and email-confirmation tokens in focused server modules.
-- [`../mail/`](../mail/) — shared outbound mail transport and one server module per email type, delivered through worker jobs.
-- [`../storage/`](../storage/) — shared S3 client and object operations used by web and worker code.
-
-## Auth rate limiting
-
-Public auth actions use Redis-backed fixed windows shared by every web instance:
-
-- Login: 10 requests per submitted email every 15 minutes.
-- Signup: 5 requests per submitted email per hour.
-- Password reset and confirmation resend: 3 requests per submitted email per hour.
-
-Counters use HMAC-pseudonymized submitted emails, expire with their window, return `429` with `Retry-After` when exceeded, and fail open if Redis is unavailable.
-
-## Private file uploads
-
-The protected `/files` example uses a prepare/upload/confirm flow:
-
-1. The route validates the filename, content type, and size, creates organization-scoped `pending`
-   metadata, and returns a five-minute presigned POST.
-2. The browser uploads directly to S3. File bytes never pass through the web process.
-3. The route confirms the object with `HeadObject` and marks it `ready` only when its metadata
-   matches.
-4. A delayed worker job marks the upload `failed` and removes its object if it is still pending
-   after 30 minutes.
-5. Downloads re-check organization ownership and redirect to a short-lived signed attachment URL.
-
-Object keys are always generated by the server. Never accept a bucket key or `organizationId` from
-the browser. The example limits files to 25 MB and serves them as attachments rather than inline
-content. See [the storage guide](../storage/README.md) for provider configuration.
-
-## Data access
-
-Routes import from [db/repositories/](../db/repositories/).
-
-```ts
-import { listItemsByOrgPaginated } from "~/db/repositories/items";
-
-const items = await listItemsByOrgPaginated(user.organizationId, page, pageSize);
+```bash
+docker compose up --build --watch web # Web + infrastructure and migrations; no worker or Sentry
+# In another terminal:
+docker compose stop web              # Stop only web; leave infrastructure running
+# After leaving the foreground command:
+npm run docker:down                  # Remove the application containers; retain volumes
 ```
 
-Multi-org: scope every query by `organizationId` (read it from the authenticated user). See [db/README.md](../db/README.md).
+Open <http://localhost:5173>. Compose Watch provides HMR and restarts telemetry, runtime, and
+startup changes. Dependency and build-file changes rebuild the image; restart after changing
+`.env`, Compose configuration, or migrations. Leave Sentry DSNs empty for this standalone workflow;
+use the [whole-app workflow](../README.md#run-the-whole-app) for local Sentry ingestion in Docker.
+Background jobs wait until a [worker](../worker/README.md) runs.
 
-## Validation
+### Host
 
-Zod for every form/action input. Parse with `parseForm` from [lib/form.ts](lib/form.ts) (action template above). Actions return the shared `ActionData` shape — `{ fieldErrors?, formError? }` — so every form renders the same way:
-
-- `<FormError actionData={actionData} />` from [components/form-error.tsx](components/form-error.tsx) at the top of the `<Form>` for top-level errors (e.g. "Invalid email or password").
-- `<FieldError name="..." actionData={actionData} />` from [components/field-error.tsx](components/field-error.tsx) next to each `<Input>`, with `invalid={!!actionData?.fieldErrors?.<name>}` on the input.
-
-If an action also needs to return successful data alongside, intersect with the extra fields (`type MyActionData = ActionData & { resentAt?: string }`) — never reuse `formError`/`fieldErrors` for non-error state.
-
-## UI
-
-Catalyst-style primitives live in [components/ui-kit/](components/ui-kit) (`Button`, `Dialog`, `Table`, `Dropdown`, `Heading`, `Input`, `Fieldset`, …) and cover most UI needs.
-
-```tsx
-import { PlusIcon, EllipsisHorizontalIcon } from "@heroicons/react/16/solid";
-import { Badge } from "~/components/ui-kit/badge";
-import { Button } from "~/components/ui-kit/button";
-import { Dropdown, DropdownButton, DropdownItem, DropdownMenu } from "~/components/ui-kit/dropdown";
-import { Heading } from "~/components/ui-kit/heading";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui-kit/table";
-
-<div className="mb-6 flex items-start justify-between">
-  <Heading>Items</Heading>
-  <Button href="/items/new">
-    <PlusIcon data-slot="icon" /> New item
-  </Button>
-</div>
-
-<Table>
-  <TableHead>
-    <TableRow>
-      <TableHeader>Title</TableHeader>
-      <TableHeader>Status</TableHeader>
-      <TableHeader>Actions</TableHeader>
-    </TableRow>
-  </TableHead>
-  <TableBody>
-    {items.map((item) => (
-      <TableRow key={item.id}>
-        <TableCell>{item.title}</TableCell>
-        <TableCell>
-          <Badge color={item.status === "published" ? "green" : "zinc"}>{item.status}</Badge>
-        </TableCell>
-        <TableCell>
-          <Dropdown>
-            <DropdownButton plain aria-label="More options">
-              <EllipsisHorizontalIcon data-slot="icon" />
-            </DropdownButton>
-            <DropdownMenu>
-              <DropdownItem href={`/items/${item.id}`}>View</DropdownItem>
-              <DropdownItem onClick={() => onDelete(item.id)}>Delete</DropdownItem>
-            </DropdownMenu>
-          </Dropdown>
-        </TableCell>
-      </TableRow>
-    ))}
-  </TableBody>
-</Table>
+```bash
+npm run docker:up             # Start database, Redis, MinIO, and bucket initialization
+npm run db:migrate            # Apply migrations
+npm run dev:web               # Start web at http://localhost:5173; Ctrl+C stops it
+npm run docker:down           # After stopping web: remove app containers, retain data
 ```
 
-- Tailwind v4 — no `tailwind.config.js`; tokens live in [app.css](app.css).
-- Use `clsx` for conditional class composition.
-- Icons: `@heroicons/react`. Pass `data-slot="icon"` so ui-kit components style them correctly.
+Run either Docker web or host web to avoid a port collision. For host telemetry, start
+[Sentry](../telemetry/sentry/README.md#run-locally) separately. Host commands read root `.env`.
 
-## Development and observability
+## Production
 
-`make dev` runs Vite on `0.0.0.0:5173` inside Docker, published only at `localhost:5173`.
-Compose Watch synchronizes source for HMR and restarts SDK/runtime/startup changes. The host
-alternative remains `npm run dev:web`.
+[Dockerfile](Dockerfile) owns `development`, `build`, and `production` targets. Use the repository
+root as build context. Production runs as the non-root Node user, with telemetry preloaded.
+Builds require no application secrets, running infrastructure, or Sentry credentials.
 
-Sentry initializes before server imports. Its React Router instrumentation traces request handlers,
-loaders, actions, and middleware. Application request counts and durations use matched route patterns;
-durations end when the handler returns, rather than when response streaming finishes. Error reporting
-filters aborts and expected responses below 500, and retains late streaming failures.
+```bash
+export SENTRY_RELEASE=blueprint@your-release # Use the same identifier for web and worker
+docker build --target production --build-arg SENTRY_RELEASE -f web/Dockerfile -t blueprint-web .
+```
 
-The browser SDK starts before hydration, connects navigation/fetch traces to server traces, and
-records masked replay. Only the public DSN, release, environment, origin, and sampling settings are
-serialized into the page. API tokens remain server-side. Vite shutdown drains the server, closes
-shared resources, then flushes Sentry. See [telemetry/README.md](../telemetry/README.md).
+Provision PostgreSQL and Redis, then run [database migrations](../db/README.md#production) before
+starting this version. Export the required configuration above with production values: `APP_URL`
+is the public origin, and database/Redis addresses must be reachable from the container.
+`docker run -e NAME` reads exported shell variables, not the root `.env` file.
+
+```bash
+docker run -d --init --stop-timeout 30 -p 127.0.0.1:3000:3000 \
+  -e DATABASE_URL -e REDIS_URL -e APP_URL \
+  -e JWT_SECRET -e REFRESH_SECRET -e RATE_LIMIT_KEY_SECRET blueprint-web
+```
+
+Add `-e NAME` for optional integration settings when enabled. Web and worker must share the same
+database and queues. The production image listens on port 3000; hosting is supplied by the adopting project.
+
+```bash
+npm run build:web             # Host build into build/web/
+npm run start:web             # Start the host production build
+```
+
+Run production web as a supervised process. See [releases](../telemetry/sentry/releases.md) for source-map uploads.
+
+## Development guides
+
+- [Routes and forms](routes.md) — adding routes, loaders, actions, and validation.
+- [Authentication](auth.md) — sessions, authorization, and rate limits.
+- [UI](ui.md) — components, styling, and icons.
+- [File uploads](../storage/uploads.md) — changing the private-file flow.
+- [Instrumentation](../telemetry/instrumentation.md) — tracing, error capture, and shutdown.

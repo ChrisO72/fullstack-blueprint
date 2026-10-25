@@ -4,7 +4,9 @@ import createSentrySDK from "sentry";
 import { releaseManifestSchema } from "../release.server";
 
 if (!process.env.SENTRY_UPLOAD_TOKEN)
-  throw new Error("Set SENTRY_UPLOAD_TOKEN for artifact uploads. See telemetry/README.md.");
+  throw new Error(
+    "Set SENTRY_UPLOAD_TOKEN for artifact uploads. See telemetry/sentry/releases.md.",
+  );
 const services = process.argv.slice(2);
 if (services.some((service) => service !== "web" && service !== "worker"))
   throw new Error("Usage: npm run sentry:upload -- [web|worker ...]");

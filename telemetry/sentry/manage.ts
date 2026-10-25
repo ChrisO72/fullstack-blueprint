@@ -102,12 +102,12 @@ if (action === "setup") {
   writeFileSync(marker, `${version}\n`);
   compose(["up", "-d"]);
   console.info(
-    "Sentry is at http://localhost:9090. Create blueprint/blueprint and configure DSNs/tokens as described in telemetry/README.md.",
+    "Sentry is at http://localhost:9090. Create blueprint/blueprint and configure DSNs/tokens as described in telemetry/sentry/README.md.",
   );
 } else if (action === "up") {
   if (!existsSync(marker))
     throw new Error(
-      "Sentry is not installed. Run make telemetry-setup once; see telemetry/README.md.",
+      "Sentry is not installed. Run make telemetry-setup once; see telemetry/sentry/README.md.",
     );
   if (readFileSync(marker, "utf8").trim() !== version)
     throw new Error(`Sentry installation must match pinned version ${version}.`);

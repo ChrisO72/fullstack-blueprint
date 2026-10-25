@@ -1,35 +1,28 @@
 # Mail
 
-Server-only outbound email transport and templates.
-
-## Structure
-
-- `client.server.ts` owns the provider client and the low-level `sendEmail` function.
-- Each email type has its own `*.server.ts` file, such as `confirmation.server.ts`.
-- BullMQ handlers in `worker/jobs/` call these modules. Web routes enqueue jobs instead of
-  contacting the provider directly.
-
-## Adding an email
-
-1. Add a focused module such as `password-reset.server.ts` that accepts typed domain inputs, builds
-   the HTML and text bodies, and calls `sendEmail`.
-2. Add a matching typed job in `worker/jobs/` with its name, payload, handler, and enqueue helper.
-3. Register the job in `worker/jobs/dispatcher.ts`.
-4. Enqueue it from web code through the helper exported by its job module.
-
-Keep queue payloads limited to the values needed to render the message. Configure bounded retries,
-backoff, retention, and a stable job ID in the enqueue helper. Email delivery is at least once, so a
-provider timeout may result in a duplicate message on retry.
-
-Mail is shared application code using a third-party provider; it has no container of its own.
-Configuration is validated by this component, independently of web authentication configuration.
+Server-only email transport and templates using Lettermint. This is shared application code;
+it has no container or process of its own.
 
 ## Configuration
 
-Set `LETTERMINT_API_KEY`, `LETTERMINT_MAIL_FROM`, and `APP_URL`. If the Lettermint environment
-variables are set, the app can send emails. Email is used for account confirmation and password
-resets. `isEmailConfigured` reports whether both optional Lettermint variables are present.
+Set these in root `.env`, or supply them through the production deployment environment:
 
-Email transport failures emit a Sentry warning inside the worker’s active span.
-Recipients, bodies, tokens, and provider response contents are not logged. The dispatcher owns
-exception capture, job completion/failure logs, and retry metrics.
+```dotenv
+APP_URL=http://localhost:5173  # Public web origin used in email links
+LETTERMINT_API_KEY=           # Provider API key; required to enable email
+LETTERMINT_MAIL_FROM=         # Verified sender address; required to enable email
+```
+
+Both Lettermint settings are optional for application startup. Set both to enable account
+confirmation and password-reset email. Use the production public origin for deployed email links.
+
+## Run locally
+
+Run the [whole app](../README.md#run-the-whole-app), or follow the individual
+[web](../web/README.md#run-locally) and [worker](../worker/README.md#run-locally) instructions.
+Web enqueues emails; a running worker performs delivery. Restart the processes after changing configuration.
+
+## Development guides
+
+- [Templates and delivery](templates.md) — adding email types and connecting delivery jobs.
+- [Instrumentation](../telemetry/instrumentation.md) — safe logging and error ownership.

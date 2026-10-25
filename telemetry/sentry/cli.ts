@@ -4,7 +4,7 @@ import { spawn } from "node:child_process";
 const token = process.env.SENTRY_AGENT_TOKEN;
 if (!token)
   throw new Error(
-    "Set SENTRY_AGENT_TOKEN to a read-only token from local Sentry. See telemetry/README.md.",
+    "Set SENTRY_AGENT_TOKEN to a read-only token from local Sentry. See telemetry/debugging.md.",
   );
 const child = spawn(
   process.execPath,
