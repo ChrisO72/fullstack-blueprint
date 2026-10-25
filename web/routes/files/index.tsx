@@ -33,7 +33,7 @@ import {
   isFileStorageEnabled,
   MAX_UPLOAD_BYTES,
 } from "~/storage/objects.server";
-import { log } from "~/observability/log.server";
+import { log } from "~/telemetry/log.server";
 import { enqueueJob } from "~/worker/enqueue";
 import {
   expirePendingFileUploadJobName,

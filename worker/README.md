@@ -104,4 +104,4 @@ existing IDs may include authentication tokens. Never log the payload.
 Request/job metrics use bounded labels; attempt numbers and hashed IDs appear only in logs/spans.
 On SIGINT/SIGTERM the worker stops accepting jobs, drains the current attempt, closes shared
 resources, then flushes the SDK. A 25-second deadline fits the container’s 30-second grace period.
-See [observability/README.md](../observability/README.md) for queries and logging examples.
+See [telemetry/README.md](../telemetry/README.md) for queries and logging examples.

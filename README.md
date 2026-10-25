@@ -25,8 +25,8 @@ Cool stuff included: [TypeScript](https://www.typescriptlang.org/) | [React](htt
 │   └── <a href="mail/README.md">README.md</a>
 ├── storage/             # S3 file storage
 │   └── <a href="storage/README.md">README.md</a>
-├── observability/       # OpenTelemetry logs, metrics and traces
-│   └── <a href="observability/README.md">README.md</a>
+├── telemetry/           # OpenTelemetry logs, metrics and traces
+│   └── <a href="telemetry/README.md">README.md</a>
 └── test/                # Automated tests
 </pre>
 
@@ -52,10 +52,10 @@ Redis, and file volumes are preserved.
 - Postgres: `127.0.0.1:55432`; Redis: `127.0.0.1:6379`; S3: `127.0.0.1:9000`
 
 Only these ports are published, on loopback. Collector, Loki, Prometheus, and Tempo stay on the
-Compose network. Open Grafana Explore to query them; see [observability/README.md](observability/README.md).
+Compose network. Open Grafana Explore to query them; see [telemetry/README.md](telemetry/README.md).
 
 Compose Watch synchronizes source for web HMR and restarts the worker on source changes. Changes in
-`observability/` restart both app processes so the SDK is initialized once per process. Dependency
+`telemetry/` restart both app processes so the SDK is initialized once per process. Dependency
 manifest changes rebuild both app images. Host dependencies, secrets, Git, and generated output are
 excluded from image copies and synchronization. After changing `.env`, Compose configuration,
 backend configuration, or migrations, stop and run `make dev` again. Migration generation still
@@ -107,40 +107,31 @@ can omit the S3 endpoint and static credentials to use the regional endpoint and
 
 Server logs, request/job metrics, and distributed traces use OpenTelemetry. The Collector sends logs
 to Loki, cumulative metrics to Prometheus, and traces to Tempo. Grafana provisions all three data
-sources and links logs to traces in both directions. See [observability/README.md](observability/README.md)
+sources and links logs to traces in both directions. See [telemetry/README.md](telemetry/README.md)
 for signal flow, logging patterns, retention, and Explore queries.
 
 ## Checks
 
 ```bash
 npm test                       # unit tests; no Docker or external services
-npm run test:integration        # auth and organization-boundary tests with isolated Postgres
-npm run check                  # format + typecheck + lint + both test suites (required gate)
+npm run check                  # format + typecheck + lint + unit tests (required gate)
 ```
 
-`npm run check` formats the repository, then runs the `typecheck`, `lint`, `test`, and
-`test:integration` scripts in sequence. It must pass before any change is considered done.
+`npm run check` formats the repository, then runs the `typecheck`, `lint`, and `test` scripts in
+sequence. It must pass before any change is considered done and does not require Docker.
 
 Unit tests cover rate limiting, logging, and telemetry using in-memory dependencies. Add unit tests
-as `test/**/*.test.ts`; use `*.integration.test.ts` for tests requiring a real database. Database
-cleanup runs only for integration tests.
-
-Integration tests use [test/compose.yml](test/compose.yml) to start a disposable Postgres container
-on `127.0.0.1:55433`, with its own Compose project and `blueprint_test` database. The runner resets
-and migrates the schema before testing, then removes the test container and its data on success or
-failure. These tests require Docker Compose with `up --wait` support but do not load the development
-Compose file or require `.env`. The development database, Redis, and S3 are untouched.
+as `test/**/*.test.ts`.
 
 ### Continuous integration
 
 A GitHub Actions workflow runs on every pull request and verifies changes with the typecheck, lint,
-formatting, and test commands similar to `npm run check` but without writing during the format check.
-Unit and integration tests run as separate steps. Only the integration step starts Postgres, using
-the test-only Compose file; development Watch configuration is not involved.
+formatting, and unit test commands similar to `npm run check` but without writing during the format
+check. CI does not require Docker or external services.
 
 ## Conventions
 
-- **Path aliases** (see [tsconfig.json](tsconfig.json)): `~/*` → `web/*`, `~/db/*` → `db/*`, `~/mail/*` → `mail/*`, `~/observability/*` → `observability/*`, `~/storage/*` → `storage/*`, `~/worker/*` → `worker/*`, `~/env.server` → [env.server.ts](env.server.ts). Use these for any cross-package or multi-level import; single-parent relative paths (`./foo`, `../foo`) are fine for siblings inside the same package. ESLint's `no-restricted-imports` blocks anything starting with `../../` to keep this consistent.
+- **Path aliases** (see [tsconfig.json](tsconfig.json)): `~/*` → `web/*`, `~/db/*` → `db/*`, `~/mail/*` → `mail/*`, `~/telemetry/*` → `telemetry/*`, `~/storage/*` → `storage/*`, `~/worker/*` → `worker/*`, `~/env.server` → [env.server.ts](env.server.ts). Use these for any cross-package or multi-level import; single-parent relative paths (`./foo`, `../foo`) are fine for siblings inside the same package. ESLint's `no-restricted-imports` blocks anything starting with `../../` to keep this consistent.
 - **Server-only modules end in `.server.ts`** and must never be imported from client components (e.g. [web/lib/auth/tokens.server.ts](web/lib/auth/tokens.server.ts), [web/lib/session.server.ts](web/lib/session.server.ts)).
 - **Generated dirs**: `.react-router/`, `build/`, and `db/drizzle/` are generated — `db/drizzle/` by `npm run db:generate`.
 - **Secrets**: `.env` is git-ignored; use `.env.example` for the schema. All env vars are validated at boot in [env.server.ts](env.server.ts)

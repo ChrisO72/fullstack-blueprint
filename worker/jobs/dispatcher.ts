@@ -1,5 +1,5 @@
 import type { Job } from "bullmq";
-import { consumeJob } from "~/observability/queue.server";
+import { consumeJob } from "~/telemetry/queue.server";
 import {
   expirePendingFileUploadJobName,
   handleExpirePendingFileUploadJob,

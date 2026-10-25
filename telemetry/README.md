@@ -1,4 +1,4 @@
-# Observability
+# Telemetry
 
 `make dev` starts the local stack. Grafana is at <http://localhost:3000>, with `admin` / `admin`
 by default (`GRAFANA_ADMIN_USER` / `GRAFANA_ADMIN_PASSWORD` in `.env` configure the initial login).
@@ -41,7 +41,7 @@ this directory change.
 
 ```sh
 node --experimental-loader=@opentelemetry/instrumentation/hook.mjs \
-  --import tsx --import ./observability/register.server.ts worker/index.ts
+  --import tsx --import ./telemetry/register.server.ts worker/index.ts
 ```
 
 The stable SDK packages use 2.12.0 and the experimental logging/Node/exporter packages use 0.223.0.
@@ -62,7 +62,7 @@ parent span. SDK export failures are diagnostic failures and do not change job/r
 Use ordinary messages and bounded attributes inside the active span:
 
 ```typescript
-import { log } from "~/observability/log.server";
+import { log } from "~/telemetry/log.server";
 
 log.info("Upload completed", { fileId: file.id });
 log.error("Upload failed", error, { fileId: file.id });

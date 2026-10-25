@@ -6,8 +6,8 @@ import {
   SimpleLogRecordProcessor,
 } from "@opentelemetry/sdk-logs";
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
-import { log } from "~/observability/log.server";
-import { safeJobId, sanitizeAttributes, sanitizeError } from "~/observability/sanitize.server";
+import { log } from "~/telemetry/log.server";
+import { safeJobId, sanitizeAttributes, sanitizeError } from "~/telemetry/sanitize.server";
 
 const exporter = new InMemoryLogRecordExporter();
 const provider = new LoggerProvider({ processors: [new SimpleLogRecordProcessor({ exporter })] });

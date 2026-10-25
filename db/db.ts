@@ -1,4 +1,4 @@
-import { registerCleanup } from "~/observability/runtime.server";
+import { registerCleanup } from "~/telemetry/runtime.server";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { env } from "../env.server";
 

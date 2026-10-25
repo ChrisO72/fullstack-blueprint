@@ -95,14 +95,14 @@ services:
     image: otel/opentelemetry-collector-contrib:0.162.0
     command: ["--config=/etc/otelcol/config.yaml"]
     volumes:
-      - ./observability/config/collector.yaml:/etc/otelcol/config.yaml:ro
+      - ./telemetry/config/collector.yaml:/etc/otelcol/config.yaml:ro
     depends_on: [loki, prometheus, tempo]
 
   loki:
     image: grafana/loki:3.7.8
     command: ["-config.file=/etc/loki/config.yaml"]
     volumes:
-      - ./observability/config/loki.yaml:/etc/loki/config.yaml:ro
+      - ./telemetry/config/loki.yaml:/etc/loki/config.yaml:ro
       - lokidata:/loki
 
   prometheus:
@@ -113,14 +113,14 @@ services:
       - --storage.tsdb.retention.time=3d
       - --web.enable-otlp-receiver
     volumes:
-      - ./observability/config/prometheus.yaml:/etc/prometheus/prometheus.yaml:ro
+      - ./telemetry/config/prometheus.yaml:/etc/prometheus/prometheus.yaml:ro
       - prometheusdata:/prometheus
 
   tempo:
     image: grafana/tempo:3.1.0
     command: ["-target=all", "-config.file=/etc/tempo/config.yaml"]
     volumes:
-      - ./observability/config/tempo.yaml:/etc/tempo/config.yaml:ro
+      - ./telemetry/config/tempo.yaml:/etc/tempo/config.yaml:ro
       - tempodata:/var/tempo
 
   grafana:
@@ -132,7 +132,7 @@ services:
     ports:
       - "127.0.0.1:3000:3000"
     volumes:
-      - ./observability/config/grafana:/etc/grafana/provisioning/datasources:ro
+      - ./telemetry/config/grafana:/etc/grafana/provisioning/datasources:ro
       - grafanadata:/var/lib/grafana
     depends_on: [loki, prometheus, tempo]
 
@@ -178,7 +178,7 @@ services:
       - --import
       - tsx
       - --import
-      - ./observability/register.server.ts
+      - ./telemetry/register.server.ts
       - ./node_modules/@react-router/dev/bin.cjs
       - dev
     ports:
@@ -190,14 +190,14 @@ services:
           target: /app
           initial_sync: true
           ignore:
-            - observability/
+            - telemetry/
             - package.json
             - package-lock.json
             - Dockerfile.dev
             - compose.yml
         - action: sync+restart
-          path: ./observability
-          target: /app/observability
+          path: ./telemetry
+          target: /app/telemetry
           initial_sync: true
         - action: rebuild
           path: package.json
@@ -223,7 +223,7 @@ services:
       - --import
       - tsx
       - --import
-      - ./observability/register.server.ts
+      - ./telemetry/register.server.ts
       - worker/index.ts
     develop:
       watch:

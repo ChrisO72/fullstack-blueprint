@@ -16,7 +16,7 @@ starts and the Files page displays setup guidance instead of file controls.
 - Credentials and bucket: [`.env.example`](../.env.example)
 
 The `objectdata` Docker volume preserves files across restarts. `npm run docker:wipe` deliberately
-removes it along with PostgreSQL, Redis, and observability data.
+removes it along with PostgreSQL, Redis, and telemetry data.
 
 The browser must receive presigned URLs containing `127.0.0.1:9000`, not the Compose hostname
 `storage`. Compose supplies `S3_ENDPOINT=http://storage:9000` for server operations and

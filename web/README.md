@@ -196,4 +196,4 @@ request-ID middleware or response header; OpenTelemetry trace/span IDs provide c
 
 The SDK loads before the web CLI and stays outside Vite HMR. Vite closes its HTTP server before
 application resources and the SDK are shut down on SIGINT/SIGTERM. See
-[observability/README.md](../observability/README.md) for conventions.
+[telemetry/README.md](../telemetry/README.md) for conventions.

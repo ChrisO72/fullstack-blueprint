@@ -1,8 +1,8 @@
-import { registerCleanup } from "~/observability/runtime.server";
+import { registerCleanup } from "~/telemetry/runtime.server";
 import { createHmac } from "node:crypto";
 import Redis from "ioredis";
 import { env } from "~/env.server";
-import { log } from "~/observability/log.server";
+import { log } from "~/telemetry/log.server";
 
 export type AuthRateLimitAction = "login" | "signup" | "password-reset" | "resend";
 

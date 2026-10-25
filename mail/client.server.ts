@@ -1,6 +1,6 @@
 import { Lettermint } from "lettermint";
 import { env } from "~/env.server";
-import { log } from "~/observability/log.server";
+import { log } from "~/telemetry/log.server";
 
 const lettermint = env.LETTERMINT_API_KEY
   ? new Lettermint({

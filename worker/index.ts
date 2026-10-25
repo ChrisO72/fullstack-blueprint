@@ -1,7 +1,7 @@
-import { safeJobId } from "~/observability/sanitize.server";
+import { safeJobId } from "~/telemetry/sanitize.server";
 import { Worker } from "bullmq";
-import { log } from "~/observability/log.server";
-import { shutdownObservability } from "~/observability/runtime.server";
+import { log } from "~/telemetry/log.server";
+import { shutdownTelemetry } from "~/telemetry/runtime.server";
 import { redisConnection } from "./redis";
 import { processJob } from "./jobs/dispatcher";
 import { startSchedules } from "./schedules/register";
@@ -22,7 +22,7 @@ async function shutdown(reason: string, exitCode = 0) {
   try {
     await worker.close();
     log.info("Worker stopped", { reason, exitCode });
-    await shutdownObservability();
+    await shutdownTelemetry();
   } catch (error) {
     log.error("Worker shutdown failed", error);
     exitCode = 1;

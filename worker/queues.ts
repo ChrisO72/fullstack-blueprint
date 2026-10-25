@@ -1,4 +1,4 @@
-import { registerCleanup } from "~/observability/runtime.server";
+import { registerCleanup } from "~/telemetry/runtime.server";
 import { Queue } from "bullmq";
 import { redisConnection } from "./redis";
 import type { JobData, JobName } from "./jobs/dispatcher";

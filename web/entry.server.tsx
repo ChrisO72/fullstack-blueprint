@@ -9,8 +9,8 @@ import {
   type EntryContext,
   type HandleErrorFunction,
 } from "react-router";
-import { log } from "~/observability/log.server";
-export { instrumentations } from "~/observability/http.server";
+import { log } from "~/telemetry/log.server";
+export { instrumentations } from "~/telemetry/http.server";
 
 export const streamTimeout = 5_000;
 

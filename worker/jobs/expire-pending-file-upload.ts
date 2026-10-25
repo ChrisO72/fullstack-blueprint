@@ -1,5 +1,5 @@
 import { getFileById, markFileFailed } from "~/db/repositories/files";
-import { log } from "~/observability/log.server";
+import { log } from "~/telemetry/log.server";
 import { deleteStoredFile } from "~/storage/objects.server";
 
 export const expirePendingFileUploadJobName = "expirePendingFileUpload" as const;

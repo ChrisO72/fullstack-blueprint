@@ -1,5 +1,5 @@
 import type { JobsOptions } from "bullmq";
-import { produceJob } from "~/observability/queue.server";
+import { produceJob } from "~/telemetry/queue.server";
 import { defaultQueue } from "./queues";
 import type { JobData, JobName } from "./jobs/dispatcher";
 

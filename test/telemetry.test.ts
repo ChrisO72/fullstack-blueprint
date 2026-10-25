@@ -2,8 +2,8 @@ import { SpanKind, SpanStatusCode, TraceFlags } from "@opentelemetry/api";
 import { defaultResource } from "@opentelemetry/resources";
 import type { ReadableSpan } from "@opentelemetry/sdk-trace-base";
 import { describe, expect, it } from "vitest";
-import { parseTraceMetadata } from "~/observability/queue.server";
-import { sanitizeSpan } from "~/observability/exporters.server";
+import { parseTraceMetadata } from "~/telemetry/queue.server";
+import { sanitizeSpan } from "~/telemetry/exporters.server";
 
 describe("queue trace metadata", () => {
   it("accepts only W3C string fields", () => {
