@@ -49,18 +49,28 @@ npm ci                       # Install host tools and dependencies
 cp .env.example .env         # Create the single local configuration file
 ```
 
-Configure all the variables, defaults and requirements are documented in [.env.example](.env.example). You can also check service specific README's for more info.
+Configure the variables in `.env` for your needs; [.env.example](.env.example) documents their
+defaults and requirements. Replace the three secret placeholders with different random values
+using the instructions in the [Web README](web/README.md#configuration).
 
-Monitoring is optional: create a hosted [Sentry project](telemetry/sentry/README.md#setup)
-and supply its DSN, or leave the DSN fields empty to disable remote reporting.
+These integrations are optional. Check each README for configuration instructions:
+
+- **Email:** enable account confirmation and password-reset emails with Lettermint, or leave its
+  settings empty. See the [Mail README](mail/README.md#configuration).
+- **File storage:** enable file uploads with S3; local MinIO defaults are already included.
+  See the [Storage README](storage/README.md#configuration).
+- **Monitoring:** enable hosted Sentry reporting, or leave both DSN fields empty to disable it.
+  See the [Sentry README](telemetry/sentry/README.md#setup).
 
 ## Run the whole app
 
 ```bash
-make dev                     # Start the app with Compose Watch
-# In another terminal, or after leaving the foreground command:
-make down                    # Stop the application Compose project; keep its data
+make dev                     # Start the app; Ctrl+C to stop
+make down                    # Remove containers but keep data
+make reload                  # Apply .env and migration changes, then resume watching
 ```
+
+`make dev` runs Compose in watch mode: code changes reload the related containers or trigger Vite HMR.
 
 This starts web, worker, PostgreSQL, Redis, and MinIO. Database migrations and
 private bucket initialization must succeed before web and worker start.
@@ -72,37 +82,20 @@ private bucket initialization must succeed before web and worker start.
 | PostgreSQL          | `127.0.0.1:55432`                                 |
 | Redis               | `127.0.0.1:6379`                                  |
 
-Published ports bind to loopback. Compose Watch reloads web source and restarts the worker on
-source changes; dependency and service build-file changes rebuild the affected image.
-After environment, Compose, or migration changes, restart with `make down` followed by `make dev`.
-
-### Host alternative
-
-After the first-time configuration, run web and worker on the host with infrastructure in Docker.
-Use one workflow at a time to avoid port collisions and duplicate workers.
-
-```bash
-npm run docker:up            # Start PostgreSQL, Redis, MinIO, and bucket initialization
-npm run db:migrate           # Apply migrations before starting application processes
-npm run dev                  # Start web + worker; Ctrl+C stops both host processes
-# After stopping the host processes:
-npm run docker:down          # Stop application infrastructure; keep its data
-```
-
-Hosted Sentry uses the same DSN configuration in host and Docker workflows.
-Host commands read `.env`; existing process variables take precedence.
-
 ## Checks
 
 ```bash
-npm run check                # Format, typecheck, lint, and unit tests; required before finishing
+make check                   # Format, typecheck, lint, and unit tests
+make check-web               # Web checks
+make check-worker            # Worker checks
+make check-db                # Database checks
+make check-mail              # Mail checks
+make check-storage           # Storage checks
+make check-telemetry         # Telemetry checks
+make check-runtime           # Runtime checks
 ```
 
-The gate requires no Docker or external services. CI runs the corresponding checks with
-non-writing formatting validation. Runtime testing is left to the user.
-
-Unit tests live in each component's `test/` directory and run together through the root gate.
-Keep the suite small and focused on application behavior; add coverage as the app grows.
+Checks run locally. Component targets scope formatting, linting, and tests; typechecking stays project-wide.
 
 ## Development guides
 
