@@ -1,51 +1,67 @@
-# File Storage
+# File storage
 
-Private S3 file storage shared by the web app and worker. PostgreSQL holds organization-scoped
-metadata; S3 holds file bytes.
+Private S3 storage shared by web and worker. PostgreSQL holds metadata; S3 holds file bytes.
+Local development uses the pinned `chrislusf/seaweedfs:4.50` image in single-container `mini` mode,
+with no custom Dockerfile or separate initialization service.
+All commands run from the repository root.
 
-All `S3_*` environment variables are optional. When `S3_BUCKET` is unset, the application still
-starts and the Files page displays setup guidance instead of file controls.
+## Configuration
 
-## Local development
-
-`npm run docker:up` starts MinIO and creates the private `blueprint-files` bucket automatically.
-
-- S3 API: `http://127.0.0.1:9000`
-- Console: `http://127.0.0.1:9001`
-- Region: `eu-central-1`
-- Credentials and bucket: [`.env.example`](../.env.example)
-
-The `objectdata` Docker volume preserves files across restarts. `npm run docker:wipe` deliberately
-removes it along with PostgreSQL and Redis data.
-
-The browser must receive presigned URLs containing `127.0.0.1:9000`, not the Compose hostname
-`storage`. The provided endpoint does this because the web process runs on the host.
-
-## Production S3
-
-Create a private bucket in `eu-central-1`, configure its CORS policy for the application origin, and
-set:
+Set these in root `.env` for local SeaweedFS:
 
 ```dotenv
-S3_REGION=eu-central-1
-S3_BUCKET=your-private-bucket
-S3_FORCE_PATH_STYLE=false
+S3_REGION=eu-central-1                # Bucket region
+S3_BUCKET=blueprint-files             # Unset to disable the files feature
+S3_ENDPOINT=http://127.0.0.1:8333      # Host access to SeaweedFS
+S3_PUBLIC_ENDPOINT=http://127.0.0.1:8333 # Browser-reachable signing endpoint
+S3_FORCE_PATH_STYLE=true              # Path-style access for local SeaweedFS
+S3_ACCESS_KEY_ID=blueprint-access-key  # Local credentials; set both key fields together
+S3_SECRET_ACCESS_KEY=blueprint-secret-key
+APP_URL=http://localhost:5173         # Allowed local browser origin
 ```
 
-Leave `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, and `S3_SECRET_ACCESS_KEY` unset on AWS so the SDK uses its
-regional endpoint and default IAM credential chain.
+All `S3_*` settings are optional. Without `S3_BUCKET`, the Files page shows setup guidance.
+Compose supplies `http://storage:8333` for server operations while keeping the browser endpoint
+reachable from the host. `S3_PUBLIC_ENDPOINT` defaults to `S3_ENDPOINT` when absent.
 
-The web and worker roles need only these bucket actions:
+Compose maps the local key pair to SeaweedFS's AWS credential settings and creates `S3_BUCKET`
+on startup, falling back to `blueprint-files` for storage initialization when it is unset.
+Omitting `S3_BUCKET` still disables the app's files feature. No anonymous access is configured.
 
-- `s3:PutObject`, `s3:GetObject`, and `s3:DeleteObject` for
-  `arn:aws:s3:::your-private-bucket/*` (`HeadObject` is authorized by `s3:GetObject`)
+## Run locally
 
-Do not grant public bucket access. Presigned POST policies constrain uploads to the server-generated
-key, declared content type, exact expected size, and a five-minute lifetime.
+```bash
+docker compose up -d --wait storage # Start SeaweedFS and wait for its private bucket
+# To stop only SeaweedFS:
+docker compose stop storage        # Retain stored files
+```
 
-## Browser CORS
+The [whole-app workflow](../README.md#run-the-whole-app) starts storage automatically. Web and
+worker wait for a successful SigV4-authenticated HEAD request to the configured bucket; a missing
+bucket or rejected credentials prevents startup.
 
-Direct uploads require a bucket CORS rule equivalent to:
+S3 API: <http://127.0.0.1:8333>, published only on host loopback. WebDAV, the admin UI, and the
+Iceberg and Lance endpoints are disabled. The `objectdata` volume mounted at `/data` preserves
+both file bytes and SeaweedFS metadata across restarts. `npm run docker:wipe` deletes that volume
+along with PostgreSQL and Redis data; separate Sentry data is preserved.
+
+## Production
+
+Create a private S3 bucket and supply these settings to web and worker:
+
+```dotenv
+S3_REGION=eu-central-1            # Match the bucket's region
+S3_BUCKET=your-private-bucket     # Replace with your bucket name
+S3_FORCE_PATH_STYLE=false         # AWS S3 addressing
+```
+
+On AWS, leave both endpoints and both explicit key fields unset to use the regional endpoint and
+default IAM credential chain. Web and worker need `s3:PutObject`, `s3:GetObject`, and `s3:DeleteObject`
+on `arn:aws:s3:::your-private-bucket/*`; `HeadObject` uses `s3:GetObject`. Keep the bucket private.
+
+### Browser CORS
+
+Configure direct uploads with the exact production application origin:
 
 ```json
 [
@@ -58,15 +74,9 @@ Direct uploads require a bucket CORS rule equivalent to:
 ]
 ```
 
-Use the exact production application origin. The local container reads `APP_URL` and configures its
-API CORS origin accordingly.
+Compose passes `APP_URL` to SeaweedFS's `s3.allowedOrigins` setting for local browser uploads.
 
-## Delivery and CloudFront
+## Development guides
 
-The default private-file flow authorizes every download in the app and redirects to a five-minute
-S3 signed URL with an attachment disposition. This is the simplest solid default.
-
-For high-volume delivery, put CloudFront in front of the private bucket with Origin Access Control
-and issue CloudFront signed URLs or cookies after the same organization authorization check. Keep
-uploads pointed directly at S3; a CDN is a download optimization, not required storage
-infrastructure.
+- [Uploads and downloads](uploads.md) — validation, authorization, signed URLs, and delivery.
+- [Repositories](../db/repositories/repository.md) — organization-scoped file metadata access.

@@ -26,7 +26,7 @@ import type { Route } from "./+types/signup";
 
 const signupSchema = z.object({
   email: z.email("Please enter a valid email address"),
-  firstname: z.string().optional(),
+  firstname: z.string().max(100, "First name is too long").optional(),
   password: z.string().min(8, "Password must be at least 8 characters"),
 });
 

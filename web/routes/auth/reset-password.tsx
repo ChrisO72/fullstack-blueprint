@@ -12,11 +12,12 @@ import { resetPassword, verifyPasswordResetToken } from "~/lib/auth/password-res
 import { parseForm, type ActionData } from "~/lib/form";
 import { isEmailConfigured } from "~/mail/client.server";
 import { clearAuthCookies } from "~/lib/session.server";
+import { createRateLimitResponse } from "~/lib/rate-limit.server";
 import type { Route } from "./+types/reset-password";
 
 const resetPasswordSchema = z
   .object({
-    token: z.string().min(1),
+    token: z.string().regex(/^[a-f0-9]{64}$/),
     password: z.string().min(8, "Password must be at least 8 characters"),
     confirmPassword: z.string().min(1, "Please confirm your password"),
   })
@@ -52,7 +53,9 @@ export async function action({ request }: Route.ActionArgs): Promise<ActionData 
   }
   if (fieldErrors) return { fieldErrors };
 
-  if (!(await resetPassword(data.token, data.password))) {
+  const result = await resetPassword(data.token, data.password);
+  if (result.status === "rate-limited") return createRateLimitResponse(result.retryAfterSeconds);
+  if (result.status === "invalid") {
     return { formError: "This password reset link is invalid or has expired." };
   }
 

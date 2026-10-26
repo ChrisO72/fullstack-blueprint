@@ -9,9 +9,29 @@ volumes:
   redisdata:
   objectdata:
 
+x-app-environment: &app-environment
+  DATABASE_URL: postgresql://${POSTGRES_USER:-blueprint-user}:${POSTGRES_PASSWORD:-blueprint-password}@database:5432/blueprint
+  REDIS_URL: redis://redis:6379
+  APP_URL: ${APP_URL:-http://localhost:5173}
+  LETTERMINT_API_KEY: ${LETTERMINT_API_KEY:-}
+  LETTERMINT_MAIL_FROM: ${LETTERMINT_MAIL_FROM:-}
+  S3_REGION: ${S3_REGION:-eu-central-1}
+  S3_BUCKET: ${S3_BUCKET:-}
+  S3_ENDPOINT: http://storage:8333
+  S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:-http://127.0.0.1:8333}
+  S3_FORCE_PATH_STYLE: "true"
+  S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-blueprint-access-key}
+  S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-blueprint-secret-key}
+  SENTRY_DSN: ${SENTRY_DSN:-}
+  SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-development}
+  SENTRY_RELEASE: ${SENTRY_RELEASE:-blueprint@local}
+  SENTRY_TRACES_SAMPLE_RATE: ${SENTRY_TRACES_SAMPLE_RATE:-}
+
 services:
   database:
-    image: postgres:16-alpine
+    build:
+      context: .
+      dockerfile: db/Dockerfile
     restart: always
     environment:
       POSTGRES_DB: "blueprint"
@@ -29,6 +49,11 @@ services:
 
   redis:
     image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
     restart: always
     volumes:
       - redisdata:/data
@@ -36,33 +61,147 @@ services:
       - "127.0.0.1:6379:6379"
 
   storage:
-    image: pgsty/minio:RELEASE.2026-06-18T00-00-00Z
+    image: chrislusf/seaweedfs:4.50
     restart: always
-    command: server /data --console-address ":9001"
+    command:
+      - mini
+      - -dir=/data
+      - -webdav=false
+      - -admin.ui=false
+      - -s3.port.iceberg=0
+      - -s3.port.lance=0
+      - -s3.allowedOrigins=${APP_URL:-http://localhost:5173}
     environment:
-      MINIO_ROOT_USER: ${S3_ACCESS_KEY_ID:-blueprint-access-key}
-      MINIO_ROOT_PASSWORD: ${S3_SECRET_ACCESS_KEY:-blueprint-secret-key}
-      MINIO_REGION_NAME: ${S3_REGION:-eu-central-1}
-      MINIO_API_CORS_ALLOW_ORIGIN: ${APP_URL:-http://localhost:5173}
+      AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-blueprint-access-key}
+      AWS_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-blueprint-secret-key}
+      AWS_DEFAULT_REGION: ${S3_REGION:-eu-central-1}
+      S3_BUCKET: ${S3_BUCKET:-blueprint-files}
     volumes:
       - objectdata:/data
     ports:
-      - "127.0.0.1:9000:9000"
-      - "127.0.0.1:9001:9001"
+      - "127.0.0.1:8333:8333"
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          curl --silent --fail --output /dev/null --head
+          --connect-timeout 2 --max-time 4
+          --aws-sigv4 "aws:amz:$${AWS_DEFAULT_REGION}:s3"
+          --user "$${AWS_ACCESS_KEY_ID}:$${AWS_SECRET_ACCESS_KEY}"
+          "http://127.0.0.1:8333/$${S3_BUCKET}"
+      interval: 2s
+      timeout: 5s
+      start_period: 10s
+      retries: 30
 
-  storage-init:
-    image: minio/mc:RELEASE.2025-08-13T08-35-41Z
-    depends_on:
-      - storage
+  migrate:
+    build:
+      context: .
+      dockerfile: db/Dockerfile.migrate
+    init: true
+    restart: "no"
     environment:
-      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-blueprint-access-key}
-      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-blueprint-secret-key}
-      S3_BUCKET: ${S3_BUCKET:-blueprint-files}
-    entrypoint: >
-      /bin/sh -c '
-        until mc alias set local http://storage:9000 "$$S3_ACCESS_KEY_ID" "$$S3_SECRET_ACCESS_KEY"; do
-          sleep 1;
-        done;
-        mc mb --ignore-existing "local/$$S3_BUCKET";
-        mc anonymous set none "local/$$S3_BUCKET";
-      '
+      DATABASE_URL: postgresql://${POSTGRES_USER:-blueprint-user}:${POSTGRES_PASSWORD:-blueprint-password}@database:5432/blueprint
+    depends_on:
+      database:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: web/Dockerfile
+      target: development
+    init: true
+    stop_grace_period: 30s
+    environment:
+      <<: *app-environment
+      JWT_SECRET: ${JWT_SECRET:-}
+      REFRESH_SECRET: ${REFRESH_SECRET:-}
+      RATE_LIMIT_KEY_SECRET: ${RATE_LIMIT_KEY_SECRET:-}
+      SENTRY_PUBLIC_DSN: ${SENTRY_PUBLIC_DSN:-}
+      SENTRY_REPLAYS_SESSION_SAMPLE_RATE: ${SENTRY_REPLAYS_SESSION_SAMPLE_RATE:-}
+      SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE: ${SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE:-}
+    depends_on: &app-dependencies
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+      storage:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:5173:5173"
+    develop:
+      watch:
+        - action: sync
+          path: .
+          target: /app
+          initial_sync: true
+          ignore:
+            - telemetry/
+            - runtime/
+            - web/vite.ts
+            - web/build.ts
+            - web/Dockerfile
+            - worker/Dockerfile
+            - db/Dockerfile
+            - db/Dockerfile.migrate
+            - package.json
+            - package-lock.json
+            - compose.yml
+        - action: sync+restart
+          path: ./telemetry
+          target: /app/telemetry
+          initial_sync: true
+          ignore: [sentry/.local/]
+        - action: sync+restart
+          path: ./runtime
+          target: /app/runtime
+          initial_sync: true
+        - action: sync+restart
+          path: ./web/vite.ts
+          target: /app/web/vite.ts
+          initial_sync: true
+        - action: rebuild
+          path: package.json
+        - action: rebuild
+          path: package-lock.json
+        - action: rebuild
+          path: web/Dockerfile
+        - action: rebuild
+          path: web/build.ts
+
+  worker:
+    build:
+      context: .
+      dockerfile: worker/Dockerfile
+      target: development
+    init: true
+    stop_grace_period: 30s
+    environment: *app-environment
+    depends_on: *app-dependencies
+    develop:
+      watch:
+        - action: sync+restart
+          path: .
+          target: /app
+          initial_sync: true
+          ignore:
+            - telemetry/sentry/.local/
+            - package.json
+            - package-lock.json
+            - worker/Dockerfile
+            - worker/build.ts
+            - web/Dockerfile
+            - db/Dockerfile
+            - db/Dockerfile.migrate
+            - compose.yml
+        - action: rebuild
+          path: package.json
+        - action: rebuild
+          path: package-lock.json
+        - action: rebuild
+          path: worker/Dockerfile
+        - action: rebuild
+          path: worker/build.ts

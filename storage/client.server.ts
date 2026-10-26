@@ -1,5 +1,5 @@
 import { S3Client } from "@aws-sdk/client-s3";
-import { env } from "~/env.server";
+import { env } from "./env.server";
 
 const credentials =
   env.S3_ACCESS_KEY_ID && env.S3_SECRET_ACCESS_KEY
@@ -12,6 +12,14 @@ const credentials =
 export const storageClient = new S3Client({
   region: env.S3_REGION,
   endpoint: env.S3_ENDPOINT,
+  forcePathStyle: env.S3_FORCE_PATH_STYLE,
+  credentials,
+});
+
+// Sign against the URL the browser actually reaches. Never rewrite signed URLs.
+export const storageSigningClient = new S3Client({
+  region: env.S3_REGION,
+  endpoint: env.S3_PUBLIC_ENDPOINT ?? env.S3_ENDPOINT,
   forcePathStyle: env.S3_FORCE_PATH_STYLE,
   credentials,
 });

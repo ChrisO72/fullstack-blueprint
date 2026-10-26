@@ -1,90 +1,90 @@
 # Worker
 
-Background job processing with BullMQ + node-cron.
+Background jobs with BullMQ and node-cron. No HTTP port is exposed.
+All commands run from the repository root.
 
-## Pattern
+## Configuration
 
-Each job owns its name, payload type, and handler. The dispatcher connects those modules to BullMQ,
-and all producers enqueue through the typed `enqueueJob` API. A job can expose a small enqueue helper
-when every producer should share options such as retries and retention.
+Requires Node 24+, Docker, and Compose 2.32.2+ for the workflows below.
 
-### Defining Jobs
-
-```typescript
-// jobs/send-confirmation-email.ts
-import { sendConfirmationEmail } from "~/mail/confirmation.server";
-import { enqueueJob } from "../enqueue";
-
-export const sendConfirmationEmailJobName = "sendConfirmationEmail" as const;
-
-export type SendConfirmationEmailJobData = {
-  to: string;
-  token: string;
-  expiresInHours: number;
-};
-
-export function enqueueConfirmationEmailJob(data: SendConfirmationEmailJobData) {
-  return enqueueJob(sendConfirmationEmailJobName, data, {
-    attempts: 3,
-    backoff: { type: "exponential", delay: 1_000 },
-    jobId: `send-confirmation-email-${data.token}`,
-    removeOnComplete: 100,
-    removeOnFail: 100,
-  });
-}
-
-export async function handleSendConfirmationEmailJob(data: SendConfirmationEmailJobData) {
-  await sendConfirmationEmail(data);
-}
+```bash
+npm ci                       # Install dependencies and host tools
+cp .env.example .env         # First setup only; preserve an existing .env
 ```
 
-Register the job in `jobs/dispatcher.ts` by importing its name, data type, and handler, adding it to
-`JobData`, and adding a matching switch case:
+Required by the worker and its jobs, in root `.env`:
 
-```typescript
-export type JobData = {
-  [exampleJobName]: ExampleJobData;
-  [sendConfirmationEmailJobName]: SendConfirmationEmailJobData;
-};
+```dotenv
+DATABASE_URL=postgresql://blueprint-user:blueprint-password@127.0.0.1:55432/blueprint # Host database
+REDIS_URL=redis://localhost:6379       # Host queue store
+APP_URL=http://localhost:5173         # Web origin for email links
 ```
 
-### Scheduling Jobs
+Web authentication secrets are not required. Compose supplies internal database and Redis
+addresses. Optional integrations: [mail](../mail/README.md#configuration),
+[storage](../storage/README.md#configuration), and [telemetry](../telemetry/README.md#configuration).
 
-```typescript
-// schedules/hourly-sync.ts
-import cron from "node-cron";
-import { enqueueJob } from "../enqueue";
-import { syncUserJobName } from "../jobs/sync-user";
+## Run locally
 
-export function registerHourlySyncSchedule() {
-  cron.schedule("0 * * * *", async () => {
-    await enqueueJob(syncUserJobName, { userId: 123 });
-  });
-}
+### Docker
+
+```bash
+docker compose up --build --watch worker # Worker + infrastructure and migrations; no web
+# In another terminal:
+docker compose stop worker              # Stop only worker; leave infrastructure running
+# After leaving the foreground command:
+npm run docker:down                     # Remove application containers; retain volumes
 ```
 
-Import each registration function in `schedules/register.ts` and call it from `startSchedules`.
+Compose Watch restarts the worker on source changes and rebuilds on dependency/build-file changes.
+Restart after editing `.env`, Compose configuration, or migrations. Optional hosted Sentry reporting
+uses the configured DSN.
 
-### Enqueue from App
+### Host
 
-```typescript
-import { CONFIRMATION_TOKEN_EXPIRY_HOURS } from "~/lib/auth/email-confirmation.server";
-import { enqueueConfirmationEmailJob } from "~/worker/jobs/send-confirmation-email";
-
-// In a route action or loader
-await enqueueConfirmationEmailJob({
-  to: user.email,
-  token,
-  expiresInHours: CONFIRMATION_TOKEN_EXPIRY_HOURS,
-});
+```bash
+npm run docker:up             # Wait for database, Redis, and SeaweedFS with its private bucket
+npm run db:migrate            # Apply migrations
+npm run dev:worker            # Start the worker; Ctrl+C stops it
+npm run docker:down           # After stopping worker: remove app containers, retain data
 ```
 
-## Guidelines
+Use one worker workflow at a time to avoid duplicate workers and schedules. Host commands read
+root `.env`; the same hosted [Sentry configuration](../telemetry/README.md#configuration) works in both workflows.
 
-- Keep each job's payload type in its job file
-- Register every job in `jobs/dispatcher.ts`
-- Enqueue through `enqueueJob`; do not call the queue directly
-- Put outbound email transport and per-email templates in `mail/`; worker handlers perform delivery
-- Keep handlers and schedule callbacks focused and minimal
-- Use cron expressions: `* * * * *` (min hour day month weekday)
-- Configure `attempts` and `backoff` when a job should retry; BullMQ jobs run once by default
+## Production
+
+[Dockerfile](Dockerfile) owns `development`, `build`, and `production` targets. Build from the
+repository root. Production runs as the non-root Node user, with telemetry preloaded.
+Builds require no application secrets, running infrastructure, or Sentry credentials.
+
+```bash
+export SENTRY_RELEASE=blueprint@your-release # Match the web image's release identifier
+docker build --target production --build-arg SENTRY_RELEASE -f worker/Dockerfile -t blueprint-worker .
+```
+
+Provision PostgreSQL and Redis and apply [migrations](../db/README.md#production) first. Export the
+required configuration above with production values. Web and worker must use the same database
+and queues, reachable from their containers; `APP_URL` is the public web origin.
+`docker run -e NAME` reads exported shell variables, not root `.env`.
+
+```bash
+docker run -d --init --stop-timeout 30 \
+  -e DATABASE_URL -e REDIS_URL -e APP_URL blueprint-worker
+```
+
+Add `-e NAME` for enabled mail, storage, and telemetry settings. Hosting is supplied by the adopting project.
+
+```bash
+npm run build:worker          # Host build into build/worker/
+npm run start:worker          # Start the host production build
+```
+
+Run production workers as supervised processes. See [releases](../telemetry/sentry/releases.md) for source-map uploads.
+
+## Development guides
+
+- [Jobs and schedules](jobs.md) — adding producers, handlers, retries, and schedules.
+- [Email templates](../mail/templates.md) — connecting email delivery.
+- [File uploads](../storage/uploads.md) — implementing file jobs.
+- [Instrumentation](../telemetry/instrumentation.md) — queue tracing, errors, and shutdown.

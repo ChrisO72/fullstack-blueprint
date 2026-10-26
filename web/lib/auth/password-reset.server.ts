@@ -7,6 +7,7 @@ import {
   replacePasswordResetToken,
 } from "~/db/repositories/passwordResetTokens";
 import { hashPassword } from "./password.server";
+import { checkAuthRateLimit } from "../rate-limit.server";
 
 export const PASSWORD_RESET_TOKEN_EXPIRY_HOURS = 1;
 export const PASSWORD_RESET_REQUEST_COOLDOWN_MS = 5 * 60 * 1000;
@@ -40,8 +41,23 @@ export async function deletePasswordResetToken(token: string): Promise<void> {
   await deleteStoredPasswordResetToken(hashPasswordResetToken(token));
 }
 
-export async function resetPassword(token: string, password: string): Promise<boolean> {
+type ResetPasswordResult =
+  { status: "success" | "invalid" } | { status: "rate-limited"; retryAfterSeconds: number };
+
+export async function resetPassword(token: string, password: string): Promise<ResetPasswordResult> {
+  const tokenHash = hashPasswordResetToken(token);
+  const stored = await findPasswordResetToken(tokenHash);
+  if (!stored) return { status: "invalid" };
+
+  const rateLimit = await checkAuthRateLimit({
+    action: "password-reset-complete",
+    account: String(stored.userId),
+  });
+  if (!rateLimit.allowed) {
+    return { status: "rate-limited", retryAfterSeconds: rateLimit.retryAfterSeconds };
+  }
+
   const passwordHash = await hashPassword(password);
-  const user = await consumePasswordResetToken(hashPasswordResetToken(token), passwordHash);
-  return user !== null;
+  const user = await consumePasswordResetToken(tokenHash, passwordHash);
+  return { status: user ? "success" : "invalid" };
 }

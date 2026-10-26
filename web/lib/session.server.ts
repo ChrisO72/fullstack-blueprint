@@ -6,12 +6,11 @@ import {
   verifyAccessToken,
 } from "./auth/tokens.server";
 import { env } from "~/env.server";
-import { getUserById } from "~/db/repositories/users";
-import type { SelectUser } from "~/db/schema/auth";
+import { getUserById, type User } from "~/db/repositories/users";
 
 const isProduction = env.NODE_ENV === "production";
 
-export const authenticatedUserContext = createContext<SelectUser>();
+export const authenticatedUserContext = createContext<User>();
 
 export const accessTokenCookie = createCookie("accessToken", {
   httpOnly: true,

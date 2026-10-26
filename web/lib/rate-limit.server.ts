@@ -1,11 +1,11 @@
+import { registerCleanup } from "~/runtime/lifecycle.server";
 import { createHmac } from "node:crypto";
 import Redis from "ioredis";
 import { env } from "~/env.server";
-import { createLogger } from "~/observability/logger.server";
+import { log } from "~/telemetry/log.server";
 
-const logger = createLogger("web");
-
-export type AuthRateLimitAction = "login" | "signup" | "password-reset" | "resend";
+export type AuthRateLimitAction =
+  "login" | "signup" | "password-reset" | "password-reset-complete" | "resend";
 
 type RateLimitRule = {
   limit: number;
@@ -42,6 +42,7 @@ export const AUTH_RATE_LIMIT_POLICIES: AuthRateLimitPolicies = {
   login: { limit: 10, windowSeconds: 15 * 60 },
   signup: { limit: 5, windowSeconds: 60 * 60 },
   "password-reset": { limit: 3, windowSeconds: 60 * 60 },
+  "password-reset-complete": { limit: 5, windowSeconds: 15 * 60 },
   resend: { limit: 3, windowSeconds: 60 * 60 },
 };
 
@@ -68,6 +69,8 @@ function getRedisClient(): Redis {
       maxRetriesPerRequest: 1,
     });
     redisClient.on("error", () => undefined);
+    const client = redisClient;
+    registerCleanup(() => client.disconnect());
   }
 
   return redisClient;
@@ -144,6 +147,6 @@ export const checkAuthRateLimit = createAuthRateLimiter({
   store: redisRateLimitStore,
   keySecret: env.RATE_LIMIT_KEY_SECRET,
   onStoreError: (error) => {
-    logger.error("auth.rate_limit.store_unavailable", error, { failMode: "open" });
+    log.error("Rate limit store unavailable", error, { failMode: "open" });
   },
 });

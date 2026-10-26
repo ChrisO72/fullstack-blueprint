@@ -8,7 +8,7 @@ import { Field, Label } from "~/components/ui-kit/fieldset";
 import { Heading } from "~/components/ui-kit/heading";
 import { Input } from "~/components/ui-kit/input";
 import { Strong, Text, TextLink } from "~/components/ui-kit/text";
-import { getUserByEmail } from "~/db/repositories/users";
+import { getUserCredentialsByEmail } from "~/db/repositories/users";
 import {
   canCreatePasswordResetToken,
   createPasswordResetToken,
@@ -61,7 +61,7 @@ export async function action({
   });
   if (!rateLimit.allowed) return createRateLimitResponse(rateLimit.retryAfterSeconds);
 
-  const user = await getUserByEmail(data.email);
+  const user = await getUserCredentialsByEmail(data.email);
   if (!user?.passwordHash || !(await canCreatePasswordResetToken(user.id))) {
     return { success: true };
   }

@@ -1,5 +1,5 @@
 import type { Job } from "bullmq";
-import { createLogger, runWithLogContext } from "~/observability/logger.server";
+import { consumeJob } from "~/telemetry/queue.server";
 import {
   expirePendingFileUploadJobName,
   handleExpirePendingFileUploadJob,
@@ -16,8 +16,6 @@ import {
   type SendPasswordResetEmailJobData,
 } from "./send-password-reset-email";
 
-const logger = createLogger("worker");
-
 export type JobData = {
   [expirePendingFileUploadJobName]: ExpirePendingFileUploadJobData;
   [sendConfirmationEmailJobName]: SendConfirmationEmailJobData;
@@ -31,31 +29,31 @@ type TypedJob = {
 }[JobName];
 
 export async function processJob(job: Job<JobData[JobName], void, JobName>) {
-  const jobId = String(job.id ?? "unknown");
-  const attempt = job.attemptsMade + 1;
-  const processedOn = job.processedOn ?? Date.now();
-  const queueWaitMs = Math.max(0, processedOn - job.timestamp - (job.opts.delay ?? 0));
-
-  return runWithLogContext({ jobId, jobName: job.name, attempt }, async () => {
-    logger.info("queue.job.started", {
-      queueWaitMs,
-      queuedAt: new Date(job.timestamp).toISOString(),
-      processingStartedAt: new Date(processedOn).toISOString(),
-    });
-
-    const typedJob = job as TypedJob;
-    switch (typedJob.name) {
-      case expirePendingFileUploadJobName:
-        await handleExpirePendingFileUploadJob(typedJob.data);
-        break;
-      case sendConfirmationEmailJobName:
-        await handleSendConfirmationEmailJob(typedJob.data);
-        break;
-      case sendPasswordResetEmailJobName:
-        await handleSendPasswordResetEmailJob(typedJob.data);
-        break;
-      default:
-        throw new Error(`Unknown job name: ${job.name}`);
-    }
-  });
+  const known = [
+    expirePendingFileUploadJobName,
+    sendConfirmationEmailJobName,
+    sendPasswordResetEmailJobName,
+  ].includes(job.name);
+  return consumeJob(
+    known ? job.name : "unknown",
+    String(job.id ?? "unknown"),
+    job.attemptsMade + 1,
+    job.opts.telemetry?.omitContext ? undefined : job.opts.telemetry?.metadata,
+    async () => {
+      const typedJob = job as TypedJob;
+      switch (typedJob.name) {
+        case expirePendingFileUploadJobName:
+          await handleExpirePendingFileUploadJob(typedJob.data);
+          break;
+        case sendConfirmationEmailJobName:
+          await handleSendConfirmationEmailJob(typedJob.data);
+          break;
+        case sendPasswordResetEmailJobName:
+          await handleSendPasswordResetEmailJob(typedJob.data);
+          break;
+        default:
+          throw new Error("Unknown job name");
+      }
+    },
+  );
 }

@@ -1,4 +1,12 @@
-import { index, integer, pgTable, timestamp, uniqueIndex, varchar } from "drizzle-orm/pg-core";
+import {
+  index,
+  integer,
+  pgTable,
+  timestamp,
+  uniqueIndex,
+  uuid,
+  varchar,
+} from "drizzle-orm/pg-core";
 import { organizations } from "./organizations";
 import { timestamps } from "./shared";
 
@@ -28,6 +36,10 @@ export const refreshTokens = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     tokenHash: varchar("token_hash", { length: 64 }).notNull().unique(),
+    tokenId: uuid("token_id"),
+    issuedAt: timestamp("issued_at"),
+    previousTokenHash: varchar("previous_token_hash", { length: 64 }).unique(),
+    previousValidUntil: timestamp("previous_valid_until"),
     expiresAt: timestamp("expires_at").notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },

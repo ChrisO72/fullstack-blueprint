@@ -3,70 +3,27 @@ import { createReadableStreamFromReadable } from "@react-router/node";
 import { isbot } from "isbot";
 import type { RenderToPipeableStreamOptions } from "react-dom/server";
 import { renderToPipeableStream } from "react-dom/server";
-import {
-  isRouteErrorResponse,
-  ServerRouter,
-  type EntryContext,
-  type HandleErrorFunction,
-  type RouterContextProvider,
-  type ServerInstrumentation,
-} from "react-router";
-import { createLogger } from "~/observability/logger.server";
-import { getRequestId } from "./lib/request-context.server";
-
-const logger = createLogger("web");
+import { ServerRouter, type EntryContext, type HandleErrorFunction } from "react-router";
+import { log } from "~/telemetry/log.server";
+import { getMetaTagTransformer, wrapSentryHandleRequest } from "@sentry/react-router";
+import { shouldReportRequestError } from "~/telemetry/http.server";
+export { instrumentations } from "~/telemetry/http.server";
 
 export const streamTimeout = 5_000;
 
-export const instrumentations: ServerInstrumentation[] = [
-  {
-    handler({ instrument }) {
-      instrument({
-        async request(handleRequest, { request, context }) {
-          const startedAt = performance.now();
-          const result = await handleRequest();
-          const fields = {
-            requestId: getRequestId(context),
-            method: request.method,
-            path: new URL(request.url).pathname,
-            routePattern: result.meta?.pattern || "unmatched",
-            statusCode: result.statusCode,
-            durationMs: Math.round(performance.now() - startedAt),
-          };
+export const handleError: HandleErrorFunction = (error, { request }) => {
+  if (!shouldReportRequestError(error, request.signal.aborted)) return;
 
-          if (result.statusCode >= 500) {
-            logger.warn("http.request.completed", fields);
-          } else {
-            logger.info("http.request.completed", fields);
-          }
-        },
-      });
-    },
-  },
-];
-
-export const handleError: HandleErrorFunction = (error, { request, context }) => {
-  if (
-    request.signal.aborted ||
-    (isRouteErrorResponse(error) && error.status < 500) ||
-    (error instanceof Response && error.status < 500)
-  ) {
-    return;
-  }
-
-  logger.error("http.request.unhandled_error", error, {
-    requestId: getRequestId(context),
-    method: request.method,
-    path: new URL(request.url).pathname,
+  log.error("Unhandled request error", error, {
+    "http.request.method": request.method,
   });
 };
 
-export default function handleRequest(
+function handleRequest(
   request: Request,
   responseStatusCode: number,
   responseHeaders: Headers,
   routerContext: EntryContext,
-  loadContext: RouterContextProvider,
 ) {
   if (request.method.toUpperCase() === "HEAD") {
     return new Response(null, {
@@ -101,7 +58,7 @@ export default function handleRequest(
           const stream = createReadableStreamFromReadable(body);
 
           responseHeaders.set("Content-Type", "text/html");
-          pipe(body);
+          pipe(getMetaTagTransformer(body));
 
           resolve(
             new Response(stream, {
@@ -115,11 +72,9 @@ export default function handleRequest(
         },
         onError(error: unknown) {
           responseStatusCode = 500;
-          if (shellRendered) {
-            logger.error("http.render.streaming_error", error, {
-              requestId: getRequestId(loadContext),
-              method: request.method,
-              path: new URL(request.url).pathname,
+          if (shellRendered && shouldReportRequestError(error, request.signal.aborted)) {
+            log.error("Streaming render failed", error, {
+              "http.request.method": request.method,
             });
           }
         },
@@ -127,3 +82,7 @@ export default function handleRequest(
     );
   });
 }
+
+export default wrapSentryHandleRequest(async (...args) =>
+  handleRequest(args[0], args[1], args[2], args[3]),
+);

@@ -1,103 +1,107 @@
-# Fullstack Blueprint
+# Web App Blueprint
 
-Template for full-stack Node + React applications.
+A battle tested template for a complete web application.
+Each part of the app has its own dedicated README file for more info.
 
-**Stack:** React Router 8 (SSR) · Tailwind + Catalyst UI · Drizzle + PostgreSQL · BullMQ + Redis · S3 file storage · Auth
+Cool stuff included: [TypeScript](https://www.typescriptlang.org/) | [React](https://react.dev/) | [React Router](https://reactrouter.com/) | [PostgreSQL](https://www.postgresql.org/) | [Redis](https://redis.io/) | [Vite](https://vite.dev/) | [Tailwind CSS](https://tailwindcss.com/) | [Drizzle ORM](https://orm.drizzle.team/) | [BullMQ](https://bullmq.io/) | [Headless UI](https://headlessui.com/) | [Motion](https://motion.dev/) | [Zod](https://zod.dev/) | [Heroicons](https://heroicons.com/) | [Lettermint](https://lettermint.co/)
 
-## Prerequisites
+| Component                            | Purpose and setup                      |
+| ------------------------------------ | -------------------------------------- |
+| [Web](web/README.md)                 | React Router UI and server routes      |
+| [Worker](worker/README.md)           | BullMQ jobs and scheduled tasks        |
+| [Database](db/README.md)             | PostgreSQL, Drizzle, and migrations    |
+| [Mail](mail/README.md)               | Lettermint email delivery              |
+| [Storage](storage/README.md)         | Private S3 storage and local SeaweedFS |
+| [Telemetry](telemetry/README.md)     | Application monitoring and debugging   |
+| [Sentry](telemetry/sentry/README.md) | Hosted monitoring setup and tooling    |
 
-- Node.js 24+
-- Docker (for Postgres, Redis, and local S3 (MinIO))
-
-## Local Development
-
-### First time setup
-
-```bash
-npm install
-cp .env.example .env          # configure env vars
-npm run docker:up              # start Postgres, Redis, and local S3 (MinIO)
-npm run db:migrate             # apply database migrations
+```text
+├── web/                 # React Router app, UI + server routes
+│   ├── components/
+│   ├── lib/
+│   ├── public/
+│   ├── routes/
+│   └── test/            # Web unit tests
+├── worker/              # Background jobs and scheduled tasks
+│   ├── jobs/
+│   └── schedules/
+├── db/                  # PostgreSQL database with Drizzle ORM
+│   ├── schema/
+│   ├── repositories/
+│   └── drizzle/
+├── mail/                # Email sending and templates
+├── storage/             # Private S3 file storage
+├── telemetry/           # Application monitoring and debugging
+│   └── sentry/          # Hosted provider setup, CLI, and artifact uploads
+├── runtime/             # Shared environment loading and shutdown
+├── docs/                # Repository-wide development guides
+└── .agents/skills/      # Repository-specific development workflow skills
 ```
 
-Postgres is exposed on `:55432`, Redis on `:6379`, and the S3 API on `:9000`.
-The local S3 (MinIO) console is available at `http://localhost:9001`; credentials are in
-[`.env.example`](.env.example).
+## First-time setup
 
-### Start dev server
+This README runs the whole app. For running, configuring, or building an individual service,
+use its local README. All commands run from the repository root.
 
-```bash
-npm run dev
-```
-
-The app runs at `http://localhost:5173`.
-
-### Local services
+Requires Node 24+, Git, Make, Docker, and Docker Compose **2.32.2+**.
 
 ```bash
-npm run docker:up              # start
-npm run docker:down            # stop
-npm run docker:wipe            # stop + delete volumes
-
-npm run db:generate -- --name=migration_name   # create a new migration
-npm run db:migrate                             # apply migrations
-npm run db:studio                              # open Drizzle Studio browser
+npm ci                       # Install host tools and dependencies
+cp .env.example .env         # Create the single local configuration file
 ```
 
-## Production
+Configure the variables in `.env` for your needs; [.env.example](.env.example) documents their
+defaults and requirements. Replace the three secret placeholders with different random values
+using the instructions in the [Web README](web/README.md#configuration).
+
+These integrations are optional. Check each README for configuration instructions:
+
+- **Email:** enable account confirmation and password-reset emails with Lettermint, or leave its
+  settings empty. See the [Mail README](mail/README.md#configuration).
+- **File storage:** enable file uploads with S3; local SeaweedFS defaults are already included.
+  See the [Storage README](storage/README.md#configuration).
+- **Monitoring:** enable hosted Sentry reporting, or leave both DSN fields empty to disable it.
+  See the [Sentry README](telemetry/sentry/README.md#setup).
+
+## Run the whole app
 
 ```bash
-npm run build                  # build web + worker
-npm run start:web              # web server only
-npm run start:worker           # background worker only
-npm run start                  # run both via concurrently (single-box / smoke test)
+make dev                     # Start the app; Ctrl+C to stop
+make down                    # Remove containers but keep data
+make reload                  # Apply .env and migration changes, then resume watching
 ```
 
-For real deployments, run `start:web` and `start:worker` as separate processes under a supervisor (Docker, Kubernetes etc.) so each gets its own logs, restart policy, and scaling. `npm start` uses `concurrently --kill-others-on-fail`, so a crash in either process tears the other down — useful for local prod-like runs, but no substitute for a supervisor.
+`make dev` runs Compose in watch mode: code changes reload the related containers or trigger Vite HMR.
 
-Set `DATABASE_URL`, `REDIS_URL`, and the `S3_*` variables to your managed services. AWS deployments
-can omit the S3 endpoint and static credentials to use the regional endpoint and IAM role. See
-[`.env.example`](.env.example) and [storage/README.md](storage/README.md).
+This starts web, worker, PostgreSQL, Redis, and SeaweedFS. SeaweedFS creates the private bucket
+automatically. Database migrations must succeed and storage must pass its authenticated bucket
+healthcheck before web and worker start.
 
-## Structured logs
-
-Server logs are redacted and written to standard output, pretty-printed in development and emitted
-as newline-delimited JSON in production. See [observability/README.md](observability/README.md) for
-the event contract, configuration, and logging policy.
+| Service          | Local address           |
+| ---------------- | ----------------------- |
+| Web              | <http://localhost:5173> |
+| SeaweedFS S3 API | <http://127.0.0.1:8333> |
+| PostgreSQL       | `127.0.0.1:55432`       |
+| Redis            | `127.0.0.1:6379`        |
 
 ## Checks
 
 ```bash
-npm test                       # critical auth and organization-boundary tests
-npm run check                  # format + typecheck + lint + tests (required pre-commit gate)
+make check                   # Format, typecheck, lint, and unit tests
+make check-web               # Web checks
+make check-worker            # Worker checks
+make check-db                # Database checks
+make check-mail              # Mail checks
+make check-storage           # Storage checks
+make check-telemetry         # Telemetry checks
+make check-runtime           # Runtime checks
 ```
 
-`npm run check` formats the repository, then runs the `typecheck`, `lint`, and `test` scripts in
-sequence. It must pass before any change is considered done.
+Checks run locally. Component targets scope formatting, linting, and tests; typechecking stays project-wide.
 
-Tests automatically start the local Postgres service and use a separate `blueprint_test` database
-inside the same container. The test schema is reset and migrated on every run; the development
-database, Redis, and S3 are untouched. Postgres remains running after the tests so an existing
-development session is not interrupted.
+## Development guides
 
-### Continuous integration
-
-A GitHub Actions workflow runs on every pull request and verifies changes with the typecheck, lint,
-formatting, and test commands similar to `npm run check` but without writing during the format check.
-
-## Project layout
-
-- [web/](web/) — React Router 8 SSR app. See [web/README.md](web/README.md) for routing, server boundary, validation, data access, and UI patterns.
-- [worker/](worker/) — BullMQ jobs + node-cron scheduler. See [worker/README.md](worker/README.md) for the job/scheduler templates.
-- [db/](db/) — Domain schema modules, generated migrations, repository functions. See [db/README.md](db/README.md) for the schema workflow and [db/repositories/README.md](db/repositories/README.md) for the repository template.
-- [mail/](mail/) — shared server-only email transport and templates. See [mail/README.md](mail/README.md) for the per-email worker pattern.
-- [storage/](storage/) — shared server-only S3 operations. See [storage/README.md](storage/README.md) for local and production setup.
-
-## Conventions
-
-- **Path aliases** (see [tsconfig.json](tsconfig.json)): `~/*` → `web/*`, `~/db/*` → `db/*`, `~/mail/*` → `mail/*`, `~/observability/*` → `observability/*`, `~/storage/*` → `storage/*`, `~/worker/*` → `worker/*`, `~/env.server` → [env.server.ts](env.server.ts). Use these for any cross-package or multi-level import; single-parent relative paths (`./foo`, `../foo`) are fine for siblings inside the same package. ESLint's `no-restricted-imports` blocks anything starting with `../../` to keep this consistent.
-- **Server-only modules end in `.server.ts`** and must never be imported from client components (e.g. [web/lib/auth/tokens.server.ts](web/lib/auth/tokens.server.ts), [web/lib/session.server.ts](web/lib/session.server.ts)).
-- **Generated dirs**: `.react-router/`, `build/`, and `db/drizzle/` are generated — `db/drizzle/` by `npm run db:generate`.
-- **Secrets**: `.env` is git-ignored; use `.env.example` for the schema. All env vars are validated at boot in [env.server.ts](env.server.ts)
-- **TypeScript strict** is on across the repo.
-- **DB access goes through repositories** in [db/repositories/](db/repositories/), one file per table.
+- [Code organization](docs/code-organization.md) — imports, server boundaries, generated files, and configuration ownership.
+- [Agent development workflow](docs/agent-workflow.md) — issue planning, reviews, implementation, functional verification, and documentation sync.
+- Component READMEs link to task-specific guides and production commands.
+- [Agent instructions](AGENTS.md) — repository rules and routing to scoped instructions.

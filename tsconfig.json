@@ -12,16 +12,18 @@
       "~/*": ["./web/*"],
       "~/db/*": ["./db/*"],
       "~/mail/*": ["./mail/*"],
-      "~/observability/*": ["./observability/*"],
       "~/storage/*": ["./storage/*"],
       "~/worker/*": ["./worker/*"],
-      "~/env.server": ["./env.server.ts"]
+      "~/telemetry/*": ["./telemetry/*"],
+      "~/runtime/*": ["./runtime/*"]
     },
     "esModuleInterop": true,
     "verbatimModuleSyntax": true,
     "noEmit": true,
+    "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
     "skipLibCheck": true,
     "strict": true
-  }
+  },
+  "exclude": ["node_modules", "build", "**/.local/**"]
 }

@@ -1,0 +1,3 @@
+interface:
+  display_name: "Blueprint Functional Review"
+  short_description: "Verify changed behavior through browser or CLI"

@@ -4,6 +4,7 @@ import {
   passwordResetTokens,
   refreshTokens,
   type InsertPasswordResetToken,
+  type SelectPasswordResetToken,
   users,
 } from "../schema/auth";
 
@@ -15,7 +16,9 @@ export async function replacePasswordResetToken(data: InsertPasswordResetToken) 
   });
 }
 
-export async function findPasswordResetToken(tokenHash: string) {
+export async function findPasswordResetToken(
+  tokenHash: string,
+): Promise<SelectPasswordResetToken | null> {
   const [row] = await db
     .select()
     .from(passwordResetTokens)

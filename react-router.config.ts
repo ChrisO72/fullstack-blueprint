@@ -2,5 +2,6 @@ import type { Config } from "@react-router/dev/config";
 
 export default {
   appDirectory: "web",
+  buildDirectory: "build/web",
   ssr: true,
 } satisfies Config;

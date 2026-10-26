@@ -2,3 +2,7 @@ drizzle/
 web/components/ui-kit/
 build
 
+
+**/.local/
+
+.obsidian/

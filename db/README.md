@@ -1,76 +1,93 @@
 # Database
 
-Drizzle ORM + PostgreSQL. See the repo-root [README.md](../README.md) for stack and commands, and [repositories/README.md](repositories/README.md) for the repository function template.
+PostgreSQL with Drizzle ORM. All commands run from the repository root.
 
-## Files
+## Configuration
 
-- `schema/` — table definitions grouped by domain (`auth.ts`, `files.ts`, `items.ts`, `organizations.ts`, `settings.ts`).
-- [schema/shared.ts](schema/shared.ts) — shared column definitions such as standard timestamps.
-- [db.ts](db.ts) — the configured Drizzle client. Import only inside repositories.
-- [repositories/](repositories/) — one file per table, exporting CRUD + relation helpers.
-- `drizzle/` — generated migrations (output of `npm run db:generate`).
+Use the root `.env` (copy `.env.example` on first setup):
 
-## Schema change workflow
-
-1. Edit the relevant domain module under `schema/`.
-2. Generate a migration:
-
-   ```bash
-   npm run db:generate -- --name=<short_change_name>
-   ```
-
-3. Apply it:
-
-   ```bash
-   npm run db:migrate
-   ```
-
-4. Commit the changed schema module and the new migration files together.
-
-## Best practices
-
-### Use the standard `timestamps` spread
-
-Every domain table should include `createdAt`, `updatedAt`, and `deletedAt` via the shared spread in [schema/shared.ts](schema/shared.ts):
-
-```ts
-import { timestamps } from "./shared";
-
-export const items = pgTable("items", {
-  id: integer().primaryKey().generatedAlwaysAsIdentity(),
-  ...timestamps,
-  organizationId: integer("organization_id")
-    .notNull()
-    .references(() => organizations.id, { onDelete: "cascade" }),
-  title: varchar({ length: 255 }).notNull(),
-});
+```dotenv
+POSTGRES_USER=blueprint-user          # Local PostgreSQL initialization
+POSTGRES_PASSWORD=blueprint-password  # Local PostgreSQL initialization
+DATABASE_URL=postgresql://blueprint-user:blueprint-password@127.0.0.1:55432/blueprint # Host tools
 ```
 
-### Soft delete only
+Keep host credentials in `DATABASE_URL` in sync. Compose sets the database name to `blueprint`
+and supplies an internal URL to containers. Database tools require only `DATABASE_URL`.
 
-Reads must filter `isNull(<table>.deleted_at)`. To delete, set `deleted_at: new Date()` — never `db.delete()`. Bump `updated_at` on every update. Full template in [repositories/README.md](repositories/README.md).
+## Run locally
 
-### Multi-org scoping
+Requires Docker; host tools also require Node 24+ and `npm ci`.
 
-Domain tables carry `organization_id`. Every read/write must filter or set it. Pass `organizationId` as a parameter rather than reading it from globals:
-
-```ts
-export async function listItemsByOrg(organizationId: number) {
-  return db
-    .select()
-    .from(items)
-    .where(and(eq(items.organizationId, organizationId), isNull(items.deletedAt)));
-}
+```bash
+docker compose up -d --build database # PostgreSQL at 127.0.0.1:55432
+npm run db:migrate                   # Apply unapplied migrations from the host
+npm run db:studio                    # Open Drizzle Studio; Ctrl+C stops it
+# After leaving Studio:
+docker compose stop database         # Stop only PostgreSQL; keep its data
 ```
 
-### Partial indexes for soft-deleted rows
+Whole-app and individual web/worker Compose startup run the migration container automatically
+before starting application processes. PostgreSQL restarts do not trigger migrations.
 
-Add `WHERE deleted_at IS NULL` partial indexes on hot lookup columns so soft-delete filters stay cheap:
+## Production
 
-```ts
-export const items = pgTable("items", {/* columns */}, (table) => [
-  index("items_org_active_idx")
-    .on(table.organizationId)
-    .where(sql`deleted_at IS NULL`),
-]);
+### PostgreSQL image
+
+[Dockerfile](Dockerfile) extends PostgreSQL 16 Alpine with its standard entrypoint. Export
+`POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_DB` with deployment values before running it:
+
+```dotenv
+POSTGRES_USER=blueprint-user   # Deployment database role
+POSTGRES_PASSWORD=            # Required: replace with a deployment secret
+POSTGRES_DB=blueprint         # Database to initialize
 ```
+
+```bash
+docker build -f db/Dockerfile -t blueprint-database .
+docker run -d --name blueprint-database \
+  -e POSTGRES_USER -e POSTGRES_PASSWORD -e POSTGRES_DB \
+  -p 127.0.0.1:55432:5432 -v blueprint-pgdata:/var/lib/postgresql/data blueprint-database
+```
+
+The database variables initialize an empty volume; they do not reconfigure an existing database.
+For container consumers, supply a reachable database address and deployment networking.
+
+### Migration image
+
+[Dockerfile.migrate](Dockerfile.migrate) packages the Node migration runner and generated SQL.
+It needs no web secrets, Redis, mail, or Sentry settings. Builds use the repository root as context.
+Export `DATABASE_URL` with a database address reachable from the container:
+
+```bash
+docker build -f db/Dockerfile.migrate -t blueprint-migrate .
+docker run --rm --init -e DATABASE_URL blueprint-migrate # Once per deployment, before web/worker
+```
+
+`docker run -e NAME` reads exported shell values, not root `.env`. Never put application migrations
+in PostgreSQL's first-initialization directory: existing databases need later migrations too.
+
+```bash
+npm run build:db              # Host build of the migration runner and SQL into build/db/
+```
+
+## Migration failures and data
+
+[migrate.ts](migrate.ts) applies unapplied migrations, closes its pool, and exits nonzero on failure.
+Compose waits for healthy PostgreSQL and a successful migration exit before starting web/worker.
+Errors retain their causes without printing SQL parameters or connection URLs.
+
+For `No space left on device`, free Docker disk space or increase its disk allocation; preserve
+`pgdata`. After fixing storage, restart the whole app with `make down` followed by `make dev`.
+
+```bash
+npm run docker:down           # Remove app containers; retain database, Redis, and file volumes
+npm run docker:wipe           # DELETES all app data in those volumes; preserves separate Sentry data
+```
+
+Wiping data is not a recovery command.
+
+## Development guides
+
+- [Schema changes](schema.md) — schema files, migration generation, timestamps, and indexes.
+- [Repositories](repositories/repository.md) — database access, soft deletes, and organization scoping.
