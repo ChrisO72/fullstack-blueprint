@@ -5,8 +5,7 @@ description: Review a fullstack-blueprint GitHub issue's implementation plan and
 
 # Plan Review Agent
 
-Input: an issue URL. Output: one review comment on that issue. Publish unless the user requests
-draft-only output. Do not edit the issue body or implementation.
+Input: an issue URL. Output: one review comment on that issue. Do not edit the issue body or implementation.
 
 ## Workflow
 
@@ -16,8 +15,7 @@ draft-only output. Do not edit the issue body or implementation.
    gh issue view "$issue_url" --json number,title,body,comments,updatedAt,url
    ```
 
-   Fetch truncated comments with `gh api --paginate`. If the plan is missing, publish a Blocked
-   review identifying the missing plan.
+   Fetch truncated comments with `gh api --paginate`. If the plan is missing, quit and notify the user.
 
 2. Verify the matching checkout. Read `AGENTS.md`, `README.md`, and affected-area instructions.
    Inspect the code behind the plan's claims. Treat the plan as a proposal, not proof.
@@ -28,7 +26,7 @@ draft-only output. Do not edit the issue body or implementation.
    Changes needed for supported defects, and Blocked for missing essential evidence. Each finding
    states severity, plan step/criterion, evidence, consequence, and required correction.
    Use high for serious correctness/security/data risks, medium for material omissions, and low
-   for nonblocking defects. Preferences alone do not block a plan.
+   for nonblocking defects.
 5. Re-fetch before posting. If requirements or the plan changed, review the changed portions
    and update the report. Post Ready and Blocked outcomes as well as findings:
 
@@ -43,7 +41,7 @@ draft-only output. Do not edit the issue body or implementation.
 ## Output format
 
 ```markdown
-**[Plan Review Agent]**: <Ready | Changes needed | Blocked>
+*[Plan Review Agent]*: <Ready | Changes needed | Blocked>
 
 <Findings with severity and commit-specific GitHub source links, or No findings.>
 <Required corrections or missing evidence.>
