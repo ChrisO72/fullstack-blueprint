@@ -38,7 +38,7 @@ the repository-local Sentry CLI with its read-only agent token.
 
 Repo-specific skills live in [.agents/skills/](.agents/skills/). Select the requested stage;
 an issue or review request does not automatically start implementation or the rest of the pipeline.
-Use `$blueprint-docs-sync` when handing off implementation changes to keep affected documentation
-in the same branch and PR. GitHub is the source of truth; each skill defines its own `gh` commands,
+Use `$blueprint-docs-sync` when documentation sync is requested; it is a separate stage from
+implementation. GitHub is the source of truth; each skill defines its own `gh` commands,
 publication destination, agent prefix, and Details format. See [the skill index](docs/agent-workflow.md)
 for inputs, outputs, and invocation examples.

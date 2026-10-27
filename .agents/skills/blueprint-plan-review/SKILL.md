@@ -53,13 +53,9 @@ Input: an issue URL. Output: one review comment on that issue. Do not edit the i
 - Assumptions: <Each assumption and its effect, or None.>
 - Rules applied: <Each rule used, its effect, and document/section link.>
 - Evidence: <Issue snapshot, inspected commit, and review limits; label self-review.>
-- Model/version: <Reported identifier/version, or Unavailable.>
-- Token spend: <Reported input/output/total, or Unavailable.>
-- Usage scope: <Stage or session; telemetry source and sampling cutoff, or Unavailable.>
 
 </details>
 ```
 
 Replace all placeholders. Keep Details collapsed and last. Use GitHub source links. Record factual
-reasons, not private deliberation or secrets. Use only current-run model/token telemetry; never
-guess. Label session totals and do not double-count cached or delegated usage.
+reasons, not private deliberation or secrets.

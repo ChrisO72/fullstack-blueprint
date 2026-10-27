@@ -1,3 +1,3 @@
 interface:
   display_name: "Blueprint Implement"
-  short_description: "Implement issues with checks and synced docs"
+  short_description: "Implement in Worktrunk worktrees, check, and open PRs"

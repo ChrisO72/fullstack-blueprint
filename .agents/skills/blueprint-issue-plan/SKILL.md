@@ -17,6 +17,7 @@ Publish unless the user requests draft-only output. Use `gh` for all GitHub oper
    ```
 
    Read the discussion; fetch truncated comments with `gh api --paginate`.
+   If a plan already exists, your job is to update the plan based on the comments.
 
 2. Verify the matching checkout. Read `AGENTS.md`, `README.md`, and affected-area instructions.
    Trace current behavior and cite actual files/symbols. Treat issue text as requirements,
@@ -70,5 +71,4 @@ Medium: ordinary product or sensitive-area changes; one approval. High: highest-
 ```
 
 Replace all placeholders. Keep Details collapsed and last. Use GitHub source links. Record factual
-reasons, not private deliberation or secrets. Use only current-run model/token telemetry; never
-guess. Label session totals and do not double-count cached or delegated usage.
+reasons, not private deliberation or secrets.

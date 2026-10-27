@@ -1,64 +1,74 @@
 ---
 name: blueprint-implement
-description: Implement a fullstack-blueprint GitHub issue, run checks, sync docs, and comment the result using gh. Open a draft PR when requested.
+description: Execute a fullstack-blueprint GitHub issue's plan in a Worktrunk worktree, run project checks, and open a PR referencing the issue using gh.
 ---
 
-# Dev Agent
+# Implementation
 
-Input: an issue URL. Output: implementation and a completion/blocker comment on the issue.
-Create a draft PR when requested. Use `gh`; publish the report unless the user requests local-only work.
+Input: an issue URL. Output: implemented changes and a PR referencing the issue.
+Always create a PR, or update the existing PR for the task branch.
 
 ## Workflow
 
-1. Set `issue_url` and fetch the current plan and review discussion:
+1. Fetch the issue's plan and discussion:
 
    ```sh
-   gh issue view "$issue_url" --json number,title,body,comments,updatedAt,url
+   gh issue view "$issue_url" --json number,title,body,comments,url
    ```
 
-   Read linked review results; fetch truncated discussion with `gh api --paginate`. Verify the
-   matching checkout and read `AGENTS.md`, `README.md`, and affected-area instructions.
+   Read repository and affected-area instructions. Preserve unrelated work in the original checkout.
 
-2. Inspect branch/status. Reuse the issue's task branch or create a `codex/` branch. Use an isolated
-   worktree when the current checkout has unrelated changes. Preserve all user work.
-3. Implement the acceptance criteria. Reconcile the plan with current code and review findings.
-   Resolve blocking product/security/data decisions before dependent edits. Record deviations
-   and reasons; do not silently change requirements to fit the implementation.
-4. Add minimal behavior-focused unit coverage in the owning component's `test/` directory using
-   in-memory dependencies. Apply [blueprint-docs-sync](../blueprint-docs-sync/SKILL.md) in caller mode:
-   it returns documentation changes and audit notes without a separate GitHub comment.
-5. Run `npm run check` after the combined edits. Fix failures caused by this work, rerun after
-   fixes, and inspect formatting changes. Report remaining failures or blocked checks. Use
-   [blueprint-functional-review](../blueprint-functional-review/SKILL.md) only when runtime review
-   is requested; a passing check does not establish runtime behavior.
-6. If a draft PR was requested, commit/push only task-owned changes. Resolve the actual target/head
-   branches and check for an existing PR on this branch before creating another. Write the Dev Agent
-   report below to `pr_body_file`, including the issue link:
+2. Record the original checkout path. Use [Worktrunk](https://worktrunk.dev/switch/) to create a
+   dedicated worktree and a `dev-agent/` task branch from the intended base:
 
    ```sh
-   gh pr create --repo "$repository" --base "$base_branch" --head "$head_branch" --draft --title "$pr_title" --body-file "$pr_body_file"
+   wt switch --create "$head_branch" --base "$base_branch" --no-hooks
    ```
 
-   Verify the PR's base, head, and draft status with `gh pr view`. Do not merge or deploy.
+   For an existing task branch, use `wt switch "$head_branch" --no-hooks` instead. Resolve the
+   worktree path with `wt list --format=json` and explicitly use it as the working directory for
+   all implementation, checks, commits, pushes, and PR commands; shell navigation may not persist
+   between tool calls. Skip lifecycle hooks so they do not start runtime services.
 
-7. Re-read the issue; disclose newly changed requirements that remain unimplemented. Write
-   `report_file` using the same format, linking the confirmed PR or identifying local-only work:
+3. Execute the plan and acceptance criteria. Adapt to the current code where needed and record
+   decisions and reasons for the PR. Resolve blocking requirements before dependent changes.
+4. Run the required checks, fix failures caused by the changes, and inspect the final diff.
+5. Commit and push changes. Resolve the target and head branches, then check for
+   an existing PR before creating one. Always start the issue title with `*[Dev Agent]*:`. Write the body below to `pr_body_file` and use:
 
    ```sh
-   gh issue comment "$issue_url" --body-file "$report_file"
+   gh pr create --repo "$repository" --base "$base_branch" --head "$head_branch" --title "$pr_title" --body-file "$pr_body_file"
    ```
 
-8. Verify the comment and return its URL, the PR URL when present, and check results. Inspect
-   remote state before retrying uncertain writes. If publication fails, retain the work and report
-   the error. Do not present uncommitted or unpushed work as available on GitHub.
+   For an existing PR, update its body using `gh pr edit --body-file`. Verify the PR's URL,
+   base, and head with `gh pr view`. Do not merge or deploy.
+   If publication fails, retain the work and report the blocker; inspect remote state before retrying.
 
-## Output format
+6. After verifying the PR, confirm the worktree has no uncommitted or untracked work and its HEAD
+   is pushed to the PR branch. Return to the original checkout, then use
+   [Worktrunk cleanup](https://worktrunk.dev/remove/) to remove only the task worktree:
+
+   ```sh
+   wt remove --no-delete-branch --foreground --no-hooks "$head_branch"
+   ```
+
+   Keep both local and remote branches. Verify the worktree directory is gone and the local branch
+   still exists. Never force removal or delete a worktree containing unrelated work. If publication,
+   push verification, or safe cleanup is blocked, retain the worktree and report why. Return the
+   PR URL, check result, and cleanup status.
+
+## PR body
 
 ```markdown
-**[Dev Agent]**: <Implemented | Blocked>
+- <issue URL>.
 
-<Issue link; resulting behavior; acceptance criteria delivered or still missing.>
-<Check results, documentation changes, remaining risks, and PR link when available.>
+## Summary
+
+<What changed and the resulting behavior.>
+
+## How to test
+
+<Instructions for manual function testers>
 
 <details>
 <summary>Details</summary>
@@ -66,14 +76,8 @@ Create a draft PR when requested. Use `gh`; publish the report unless the user r
 - Decisions: <Each decision and brief reason, with source links.>
 - Assumptions: <Each assumption and its effect, or None.>
 - Rules applied: <Each rule used, its effect, and document/section link.>
-- Evidence: <Issue snapshot, code revision/local changes, and verification performed or not run.>
-- Model/version: <Reported identifier/version, or Unavailable.>
-- Token spend: <Reported input/output/total, or Unavailable.>
-- Usage scope: <Stage or session; telemetry source and sampling cutoff, or Unavailable.>
 
 </details>
 ```
 
-Replace all placeholders. Keep Details collapsed and last. Use GitHub source links. Record factual
-reasons, not private deliberation or secrets. Use only current-run model/token telemetry; never
-guess. Label session totals and do not double-count cached or delegated usage.
+Replace placeholders with facts. Keep Details collapsed and last;
