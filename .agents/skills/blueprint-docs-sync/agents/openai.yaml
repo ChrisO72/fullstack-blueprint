@@ -1,3 +1,0 @@
-interface:
-  display_name: "Blueprint Docs Sync"
-  short_description: "Sync affected documentation in the same PR"

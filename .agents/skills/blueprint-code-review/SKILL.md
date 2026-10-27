@@ -27,8 +27,9 @@ output. Keep the checkout unchanged; do not fix code, approve the PR, or resolve
    Review the complete base-to-head diff, not only the most recent commit.
 3. Find concrete defects in correctness, permissions/organization isolation, data integrity,
    compatibility, async retries, cleanup, and failure handling. Check applicable architecture
-   rules and changed documentation contracts. Exclude style preferences, speculative failures,
-   duplicates, and unrelated pre-existing defects.
+   rules. Check that relevant documentation, including golden paths and examples, was updated
+   to match the implementation; report missing or stale guidance. Exclude style preferences,
+   speculative failures, duplicates, and unrelated pre-existing defects.
 4. Write `report_file` in the format below. Each finding includes priority, a commit-specific
    GitHub file/line link, triggering condition, consequence, and correction. Use P0 for immediate
    critical impact, P1 for serious defects to fix before merge, P2 for ordinary functional defects,

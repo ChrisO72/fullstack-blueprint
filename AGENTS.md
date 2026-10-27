@@ -33,12 +33,3 @@ generated files, or environment ownership.
 
 For recorded errors, traces, or logs, read [telemetry/debugging.md](telemetry/debugging.md) and use
 the repository-local Sentry CLI with its read-only agent token.
-
-## Development workflow skills
-
-Repo-specific skills live in [.agents/skills/](.agents/skills/). Select the requested stage;
-an issue or review request does not automatically start implementation or the rest of the pipeline.
-Use `$blueprint-docs-sync` when documentation sync is requested; it is a separate stage from
-implementation. GitHub is the source of truth; each skill defines its own `gh` commands,
-publication destination, agent prefix, and Details format. See [the skill index](docs/agent-workflow.md)
-for inputs, outputs, and invocation examples.

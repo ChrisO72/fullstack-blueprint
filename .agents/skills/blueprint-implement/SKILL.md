@@ -32,8 +32,10 @@ Always create a PR, or update the existing PR for the task branch.
 
 3. Execute the plan and acceptance criteria. Adapt to the current code where needed and record
    decisions and reasons for the PR. Resolve blocking requirements before dependent changes.
-4. Run the required checks, fix failures caused by the changes, and inspect the final diff.
-5. Commit and push changes. Resolve the target and head branches, then check for
+4. Update all relevant documentation, including READMEs, topic guides, golden paths, and examples,
+   to match the implementation. Keep these changes in the same PR.
+5. Run the required checks, fix failures caused by the changes, and inspect the final diff.
+6. Commit and push changes. Resolve the target and head branches, then check for
    an existing PR before creating one. Always start the issue title with `*[Dev Agent]*:`. Write the body below to `pr_body_file` and use:
 
    ```sh
@@ -44,7 +46,7 @@ Always create a PR, or update the existing PR for the task branch.
    base, and head with `gh pr view`. Do not merge or deploy.
    If publication fails, retain the work and report the blocker; inspect remote state before retrying.
 
-6. After verifying the PR, confirm the worktree has no uncommitted or untracked work and its HEAD
+7. After verifying the PR, confirm the worktree has no uncommitted or untracked work and its HEAD
    is pushed to the PR branch. Return to the original checkout, then use
    [Worktrunk cleanup](https://worktrunk.dev/remove/) to remove only the task worktree:
 
