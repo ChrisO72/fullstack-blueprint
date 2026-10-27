@@ -65,9 +65,6 @@ Medium: ordinary product or sensitive-area changes; one approval. High: highest-
 - Assumptions: <Each assumption and its effect, or None.>
 - Rules applied: <Each rule used, its effect, and document/section link.>
 - Evidence: <Issue snapshot and inspected code commit.>
-- Model/version: <Reported identifier/version, or Unavailable.>
-- Token spend: <Reported input/output/total, or Unavailable.>
-- Usage scope: <Stage or session; telemetry source and sampling cutoff, or Unavailable.>
 
 </details>
 ```
