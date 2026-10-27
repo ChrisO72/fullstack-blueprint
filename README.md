@@ -13,7 +13,6 @@ Cool stuff included: [TypeScript](https://www.typescriptlang.org/) | [React](htt
 | [Mail](mail/README.md)               | Lettermint email delivery              |
 | [Storage](storage/README.md)         | Private S3 storage and local SeaweedFS |
 | [Telemetry](telemetry/README.md)     | Application monitoring and debugging   |
-| [Sentry](telemetry/sentry/README.md) | Hosted monitoring setup and tooling    |
 
 ```text
 ├── web/                 # React Router app, UI + server routes
